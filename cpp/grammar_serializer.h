@@ -4,16 +4,14 @@
  * \brief The header for printing the AST of a BNF grammar.
  */
 
-#ifndef MLC_LLM_GRAMMAR_GRAMMAR_SERIALIZER_H_
-#define MLC_LLM_GRAMMAR_GRAMMAR_SERIALIZER_H_
+#ifndef XGRAMMAR_GRAMMAR_SERIALIZER_H_
+#define XGRAMMAR_GRAMMAR_SERIALIZER_H_
+
+#include <xgrammar/grammar.h>
 
 #include <string>
 
-#include "grammar.h"
-
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 /*!
  * \brief Serialize the abstract syntax tree of a BNF grammar to a string.
@@ -38,9 +36,9 @@ class BNFGrammarSerializer {
  */
 class BNFGrammarPrinter : public BNFGrammarSerializer {
  private:
-  using Rule = BNFGrammarNode::Rule;
-  using RuleExprType = BNFGrammarNode::RuleExprType;
-  using RuleExpr = BNFGrammarNode::RuleExpr;
+  using Rule = BNFGrammar::Implpl::Rule;
+  using RuleExprType = BNFGrammar::Implpl::RuleExprType;
+  using RuleExpr = BNFGrammar::Implpl::RuleExpr;
 
  public:
   /*!
@@ -110,8 +108,6 @@ class BNFGrammarJSONSerializer : public BNFGrammarSerializer {
   bool prettify_;
 };
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_GRAMMAR_SERIALIZER_H_
+#endif  // XGRAMMAR_GRAMMAR_SERIALIZER_H_

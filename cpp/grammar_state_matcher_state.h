@@ -3,18 +3,17 @@
  * \file grammar/grammar_state_matcher_state.h
  * \brief The header for the definition of the state used in the grammar state matcher.
  */
-#ifndef MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
-#define MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
+#ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
+#define XGRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
+
+#include <xgrammar/grammar.h>
 
 #include <queue>
 #include <vector>
 
-#include "grammar.h"
 #include "grammar_serializer.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 using namespace tvm::runtime;
 
@@ -44,8 +43,9 @@ struct RulePosition {
   static constexpr int32_t kNoParent = -1;
 
   constexpr RulePosition() = default;
-  constexpr RulePosition(int32_t rule_id, int32_t sequence_id, int32_t element_id,
-                         int32_t parent_id = kNoParent)
+  constexpr RulePosition(
+      int32_t rule_id, int32_t sequence_id, int32_t element_id, int32_t parent_id = kNoParent
+  )
       : rule_id(rule_id), sequence_id(sequence_id), element_id(element_id), parent_id(parent_id) {}
 
   // The position is invalid when sequence_id is -1.
@@ -75,7 +75,7 @@ class RulePositionBuffer {
       id = static_cast<int32_t>(buffer_.size()) - 1;
     } else {
       id = free_nodes_.back();
-      DCHECK(buffer_[id].IsInvalid());
+      XGRAMMAR_DCHECK(buffer_[id].IsInvalid());
       free_nodes_.pop_back();
     }
     rule_position.reference_count = 0;
@@ -85,7 +85,7 @@ class RulePositionBuffer {
 
   /*! \brief Free the RulePosition with the given id. */
   void Free(int32_t id) {
-    DCHECK(!buffer_[id].IsInvalid());
+    XGRAMMAR_DCHECK(!buffer_[id].IsInvalid());
     buffer_[id] = kInvalidRulePosition;
     free_nodes_.push_back(id);
   }
@@ -95,19 +95,19 @@ class RulePositionBuffer {
 
   /*! \brief Get the number of allocated nodes. */
   size_t Size() const {
-    DCHECK(buffer_.size() >= free_nodes_.size());
+    XGRAMMAR_DCHECK(buffer_.size() >= free_nodes_.size());
     return buffer_.size() - free_nodes_.size();
   }
 
   /*! \brief Get the RulePosition with the given id. */
   RulePosition& operator[](int32_t id) {
-    DCHECK(id >= 0 && id < static_cast<int32_t>(buffer_.size()));
-    DCHECK(!buffer_[id].IsInvalid());
+    XGRAMMAR_DCHECK(id >= 0 && id < static_cast<int32_t>(buffer_.size()));
+    XGRAMMAR_DCHECK(!buffer_[id].IsInvalid());
     return buffer_[id];
   }
   const RulePosition& operator[](int32_t id) const {
-    DCHECK(id >= 0 && id < static_cast<int32_t>(buffer_.size()));
-    DCHECK(!buffer_[id].IsInvalid());
+    XGRAMMAR_DCHECK(id >= 0 && id < static_cast<int32_t>(buffer_.size()));
+    XGRAMMAR_DCHECK(!buffer_[id].IsInvalid());
     return buffer_[id];
   }
 
@@ -145,8 +145,10 @@ class RulePositionTree {
   int32_t NewNode(const RulePosition& rule_position) {
     auto id = node_buffer_.Allocate(rule_position);
     if (rule_position.parent_id != RulePosition::kNoParent) {
-      DCHECK(rule_position.parent_id < static_cast<int32_t>(node_buffer_.Capacity()) &&
-             !node_buffer_[rule_position.parent_id].IsInvalid());
+      XGRAMMAR_DCHECK(
+          rule_position.parent_id < static_cast<int32_t>(node_buffer_.Capacity()) &&
+          !node_buffer_[rule_position.parent_id].IsInvalid()
+      );
       node_buffer_[rule_position.parent_id].reference_count++;
     }
     return id;
@@ -161,14 +163,14 @@ class RulePositionTree {
 
   /*! \brief Attach an additional reference to the node with the given id. */
   void AttachRefTo(int32_t id) {
-    DCHECK(id != RulePosition::kNoParent);
+    XGRAMMAR_DCHECK(id != RulePosition::kNoParent);
     node_buffer_[id].reference_count++;
   }
 
   /*! \brief Remove a reference to the node with the given id. If the reference count becomes zero,
    * free the node and recursively all its ancestors with zero reference count. */
   void RemoveRefTo(int32_t id) {
-    DCHECK(id != RulePosition::kNoParent);
+    XGRAMMAR_DCHECK(id != RulePosition::kNoParent);
     auto cur_node = id;
     while (cur_node != RulePosition::kNoParent) {
       node_buffer_[cur_node].reference_count--;
@@ -183,8 +185,8 @@ class RulePositionTree {
 
   /*! \brief Get the RulePosition with the given id. */
   const RulePosition& operator[](int32_t id) const {
-    DCHECK(id != RulePosition::kNoParent);
-    DCHECK(!node_buffer_[id].IsInvalid());
+    XGRAMMAR_DCHECK(id != RulePosition::kNoParent);
+    XGRAMMAR_DCHECK(!node_buffer_[id].IsInvalid());
     return node_buffer_[id];
   }
 
@@ -251,7 +253,7 @@ class StackTopsHistory {
   /*! \brief Roll back to several previous steps. Possibly frees node that do not exist in any stack
    * any more. */
   void Rollback(int rollback_steps) {
-    DCHECK(rollback_steps < stack_tops_history_.size())
+    XGRAMMAR_DCHECK(rollback_steps < stack_tops_history_.size())
         << "The number of requested rollback steps is greater than or equal to the current "
            "history "
         << "size: " << rollback_steps << " vs " << stack_tops_history_.size() << ".";
@@ -263,7 +265,7 @@ class StackTopsHistory {
   /*! \brief Discard the earliest several steps. Possibly frees node that do not exist in any stack
    * any more. */
   void DiscardEarliest(int discard_steps) {
-    DCHECK(discard_steps < stack_tops_history_.size())
+    XGRAMMAR_DCHECK(discard_steps < stack_tops_history_.size())
         << "The number of requested discard steps is greater than or equal to the current "
            "history "
         << "size: " << discard_steps << " vs " << stack_tops_history_.size() << ".";
@@ -343,11 +345,13 @@ inline std::string RulePositionTree::PrintNode(const RulePosition& rule_position
   auto sequence = grammar_->GetRuleExpr(rule_position.sequence_id);
   if (rule_position.element_id < static_cast<int32_t>(sequence.size())) {
     auto element = grammar_->GetRuleExpr(sequence[rule_position.element_id]);
-    if (element.type == BNFGrammarNode::RuleExprType::kByteString) {
+    if (element.type == BNFGrammar::Impl::RuleExprType::kByteString) {
       ss << ", element in string: " << rule_position.element_in_string;
     } else {
-      DCHECK(element.type == BNFGrammarNode::RuleExprType::kCharacterClass ||
-             element.type == BNFGrammarNode::RuleExprType::kCharacterClassStar);
+      XGRAMMAR_DCHECK(
+          element.type == BNFGrammar::Impl::RuleExprType::kCharacterClass ||
+          element.type == BNFGrammar::Impl::RuleExprType::kCharacterClassStar
+      );
       ss << ", left utf8 bytes: " << rule_position.left_utf8_bytes;
     }
   }
@@ -374,15 +378,16 @@ inline std::string RulePositionTree::PrintStackByTopId(int32_t top_id) const {
 
 inline void RulePositionTree::CheckWellFormed(const std::vector<int32_t>& outside_pointers) const {
   const auto& buffer = node_buffer_.buffer_;
-  std::unordered_set<int32_t> free_nodes_set(node_buffer_.free_nodes_.begin(),
-                                             node_buffer_.free_nodes_.end());
+  std::unordered_set<int32_t> free_nodes_set(
+      node_buffer_.free_nodes_.begin(), node_buffer_.free_nodes_.end()
+  );
   int buffer_size = static_cast<int>(buffer.size());
   std::vector<int> new_reference_counter(buffer_size, 0);
   std::vector<bool> visited(buffer_size, false);
   std::queue<int> visit_queue;
   for (auto id : outside_pointers) {
-    CHECK(id >= 0 && id < buffer_size);
-    CHECK(!buffer[id].IsInvalid());
+    XGRAMMAR_CHECK(id >= 0 && id < buffer_size);
+    XGRAMMAR_CHECK(!buffer[id].IsInvalid());
     new_reference_counter[id]++;
     if (visited[id] == false) {
       visited[id] = true;
@@ -394,8 +399,8 @@ inline void RulePositionTree::CheckWellFormed(const std::vector<int32_t>& outsid
     visit_queue.pop();
     const auto& rule_position = buffer[cur_id];
     if (rule_position.parent_id != RulePosition::kNoParent) {
-      CHECK(rule_position.parent_id >= 0 && rule_position.parent_id < buffer_size);
-      CHECK(!buffer[rule_position.parent_id].IsInvalid());
+      XGRAMMAR_CHECK(rule_position.parent_id >= 0 && rule_position.parent_id < buffer_size);
+      XGRAMMAR_CHECK(!buffer[rule_position.parent_id].IsInvalid());
       new_reference_counter[rule_position.parent_id]++;
       if (visited[rule_position.parent_id] == false) {
         visited[rule_position.parent_id] = true;
@@ -406,12 +411,12 @@ inline void RulePositionTree::CheckWellFormed(const std::vector<int32_t>& outsid
 
   for (int i = 0; i < static_cast<int32_t>(buffer.size()); ++i) {
     if (free_nodes_set.count(i)) {
-      CHECK(buffer[i].IsInvalid());
-      CHECK(visited[i] == false);
+      XGRAMMAR_CHECK(buffer[i].IsInvalid());
+      XGRAMMAR_CHECK(visited[i] == false);
     } else {
-      CHECK(visited[i] == true);
-      CHECK(!buffer[i].IsInvalid());
-      CHECK(new_reference_counter[i] == buffer[i].reference_count)
+      XGRAMMAR_CHECK(visited[i] == true);
+      XGRAMMAR_CHECK(!buffer[i].IsInvalid());
+      XGRAMMAR_CHECK(new_reference_counter[i] == buffer[i].reference_count)
           << "Reference counters unmatch for node #" << i << ": Updated "
           << new_reference_counter[i] << ", Original " << buffer[i].reference_count;
     }
@@ -419,8 +424,8 @@ inline void RulePositionTree::CheckWellFormed(const std::vector<int32_t>& outsid
 }
 
 inline std::string StackTopsHistory::PrintHistory(int history_position_to_latest) const {
-  const auto& latest_tops = stack_tops_history_[static_cast<int64_t>(stack_tops_history_.size()) -
-                                                1 - history_position_to_latest];
+  const auto& latest_tops = stack_tops_history_
+      [static_cast<int64_t>(stack_tops_history_.size()) - 1 - history_position_to_latest];
   std::stringstream ss;
   ss << "Stacks tops size: " << latest_tops.size() << std::endl;
   int cnt = 0;
@@ -439,8 +444,6 @@ inline void StackTopsHistory::CheckWellFormed() const {
   tree_->CheckWellFormed(outside_pointers);
 }
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
+#endif  // XGRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_

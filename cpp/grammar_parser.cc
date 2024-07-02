@@ -9,9 +9,7 @@
 #include "../support/json_parser.h"
 #include "grammar_builder.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 class EBNFParserImpl {
  public:
@@ -19,7 +17,7 @@ class EBNFParserImpl {
   BNFGrammar DoParse(std::string ebnf_string, std::string main_rule);
 
  private:
-  using Rule = BNFGrammarNode::Rule;
+  using Rule = BNFGrammar::Impl::Rule;
   using ParseError = EBNFParser::ParseError;
 
   // Parsing different parts of the grammar
@@ -68,8 +66,10 @@ class EBNFParserImpl {
 
   // Throw a ParseError with the given message and the line and column number.
   [[noreturn]] void ThrowParseError(const std::string& msg) {
-    throw ParseError("EBNF parse error at line " + std::to_string(cur_line_) + ", column " +
-                     std::to_string(cur_column_) + ": " + msg);
+    throw ParseError(
+        "EBNF parse error at line " + std::to_string(cur_line_) + ", column " +
+        std::to_string(cur_column_) + ": " + msg
+    );
   }
 
   // The grammar builder
@@ -134,8 +134,8 @@ std::string EBNFParserImpl::ParseName(bool accept_empty) {
 // Character class should not contain newlines.
 int32_t EBNFParserImpl::ParseCharacterClass() {
   static constexpr TCodepoint kUnknownUpperBound = -4;
-  static const std::unordered_map<std::string, TCodepoint> kCustomEscapeMap = {{"\\-", '-'},
-                                                                               {"\\]", ']'}};
+  static const std::unordered_map<std::string, TCodepoint> kCustomEscapeMap = {
+      {"\\-", '-'}, {"\\]", ']'}};
 
   std::vector<BNFGrammarBuilder::CharacterClassElement> elements;
 
@@ -166,13 +166,13 @@ int32_t EBNFParserImpl::ParseCharacterClass() {
     }
     Consume(new_cur - cur_);
     if (past_is_hyphen) {
-      ICHECK(!elements.empty());
+      XGRAMMAR_ICHECK(!elements.empty());
       if (elements.back().lower > codepoint) {
         ThrowParseError("Invalid character class: lower bound is larger than upper bound");
       }
       elements.back().upper = codepoint;
       past_is_hyphen = false;
-      ICHECK(past_is_single_char == false);
+      XGRAMMAR_ICHECK(past_is_single_char == false);
     } else {
       elements.push_back({codepoint, kUnknownUpperBound});
       past_is_single_char = true;
@@ -276,7 +276,7 @@ int32_t EBNFParserImpl::ParseElement() {
 }
 
 int32_t EBNFParserImpl::HandleStarQuantifier(int32_t rule_expr_id) {
-  BNFGrammarNode::RuleExpr rule_expr = builder_.GetRuleExpr(rule_expr_id);
+  BNFGrammar::Impl::RuleExpr rule_expr = builder_.GetRuleExpr(rule_expr_id);
   if (rule_expr.type == BNFGrammarBuilder::RuleExprType::kCharacterClass) {
     // We have special handling for character class star, e.g. [a-z]*
     rule_expr.type = BNFGrammarBuilder::RuleExprType::kCharacterClassStar;
@@ -288,7 +288,8 @@ int32_t EBNFParserImpl::HandleStarQuantifier(int32_t rule_expr_id) {
     auto new_rule_id = builder_.AddEmptyRule(new_rule_name);
     auto ref_to_new_rule = builder_.AddRuleRef(new_rule_id);
     auto new_rule_expr_id = builder_.AddChoices(
-        {builder_.AddSequence({rule_expr_id, ref_to_new_rule}), builder_.AddEmptyStr()});
+        {builder_.AddSequence({rule_expr_id, ref_to_new_rule}), builder_.AddEmptyStr()}
+    );
     builder_.UpdateRuleBody(new_rule_id, new_rule_expr_id);
 
     // Return the reference to the new rule
@@ -335,7 +336,7 @@ int32_t EBNFParserImpl::ParseQuantifier() {
     case '?':
       return HandleQuestionQuantifier(rule_expr_id);
     default:
-      LOG(FATAL) << "Unreachable";
+      XGRAMMAR_LOG(FATAL) << "Unreachable";
   }
 }
 
@@ -459,15 +460,16 @@ BNFGrammar EBNFParser::Parse(std::string ebnf_string, std::string main_rule) {
 }
 
 BNFGrammar BNFJSONParser::Parse(std::string json_string) {
-  auto node = make_object<BNFGrammarNode>();
+  auto node = make_object<BNFGrammar::Impl>();
   auto grammar_json = json::ParseToJSONObject(json_string);
   auto rules_json = json::Lookup<picojson::array>(grammar_json, "rules");
   for (const auto& rule_json : rules_json) {
     auto rule_json_obj = rule_json.get<picojson::object>();
     auto name = json::Lookup<std::string>(rule_json.get<picojson::object>(), "name");
     auto rule_expr = static_cast<int32_t>(
-        json::Lookup<int64_t>(rule_json.get<picojson::object>(), "body_expr_id"));
-    node->rules_.push_back(BNFGrammarNode::Rule({name, rule_expr}));
+        json::Lookup<int64_t>(rule_json.get<picojson::object>(), "body_expr_id")
+    );
+    node->rules_.push_back(BNFGrammar::Impl::Rule({name, rule_expr}));
   }
   auto rule_expr_data_json = json::Lookup<picojson::array>(grammar_json, "rule_expr_data");
   for (const auto& data_json : rule_expr_data_json) {
@@ -480,6 +482,4 @@ BNFGrammar BNFJSONParser::Parse(std::string json_string) {
   return BNFGrammar(std::move(node));
 }
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar

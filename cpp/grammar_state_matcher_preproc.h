@@ -3,20 +3,19 @@
  * \file grammar/grammar_state_matcher_preproc.h
  * \brief The header for the preprocessing of the grammar state matcher.
  */
-#ifndef MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
-#define MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
+#ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
+#define XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
+
+#include <xgrammar/grammar.h>
 
 #include <vector>
 
 #include "../support/dynamic_bitset.h"
 #include "../support/encoding.h"
 #include "../support/utils.h"
-#include "grammar.h"
 #include "grammar_state_matcher_base.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 using namespace tvm::runtime;
 
@@ -56,11 +55,13 @@ struct CatagorizedTokens {
 
   CatagorizedTokens() = default;
 
-  CatagorizedTokens(int vocab_size,
-                    const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
-                    const std::vector<int32_t>& accepted_indices,
-                    const std::vector<int32_t>& rejected_indices,
-                    const std::vector<int32_t>& uncertain_indices);
+  CatagorizedTokens(
+      int vocab_size,
+      const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
+      const std::vector<int32_t>& accepted_indices,
+      const std::vector<int32_t>& rejected_indices,
+      const std::vector<int32_t>& uncertain_indices
+  );
 };
 
 /*!
@@ -103,8 +104,12 @@ class GrammarStateInitContext {
 
   struct RulePositionHash {
     std::size_t operator()(const RulePosition& rule_position) const noexcept {
-      return HashCombine(rule_position.sequence_id, rule_position.element_id,
-                         rule_position.left_utf8_bytes, rule_position.element_in_string);
+      return HashCombine(
+          rule_position.sequence_id,
+          rule_position.element_id,
+          rule_position.left_utf8_bytes,
+          rule_position.element_in_string
+      );
     }
   };
 
@@ -128,16 +133,19 @@ class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
    * no uncertain tokens. Useful for the main rule.
    */
   CatagorizedTokens GetCatagorizedTokens(
-      int vocab_size, const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
-      bool consider_parent_rule);
+      int vocab_size,
+      const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
+      bool consider_parent_rule
+  );
 
  private:
-  using RuleExpr = BNFGrammarNode::RuleExpr;
-  using RuleExprType = BNFGrammarNode::RuleExprType;
+  using RuleExpr = BNFGrammar::Impl::RuleExpr;
+  using RuleExprType = BNFGrammar::Impl::RuleExprType;
 
   /*! \brief Check if a token can pass the lookahead assertion. */
-  bool IsTokenPassLookaheadAssertion(const std::string& token,
-                                     const std::vector<bool>& can_reach_end_stack);
+  bool IsTokenPassLookaheadAssertion(
+      const std::string& token, const std::vector<bool>& can_reach_end_stack
+  );
 
   // The id of the initial rule.
   int32_t init_rule_id;
@@ -151,9 +159,12 @@ class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
 };
 
 inline CatagorizedTokens::CatagorizedTokens(
-    int vocab_size, const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
-    const std::vector<int32_t>& accepted_indices, const std::vector<int32_t>& rejected_indices,
-    const std::vector<int32_t>& uncertain_indices) {
+    int vocab_size,
+    const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
+    const std::vector<int32_t>& accepted_indices,
+    const std::vector<int32_t>& rejected_indices,
+    const std::vector<int32_t>& uncertain_indices
+) {
   auto size_acc = accepted_indices.size();
   auto size_rej = rejected_indices.size();
 
@@ -177,7 +188,8 @@ inline CatagorizedTokens::CatagorizedTokens(
 }
 
 bool GrammarStateMatcherForInitContext::IsTokenPassLookaheadAssertion(
-    const std::string& token, const std::vector<bool>& can_reach_end_stack) {
+    const std::string& token, const std::vector<bool>& can_reach_end_stack
+) {
   auto lookahead_assertion_id = grammar_->GetRule(init_rule_id).lookahead_assertion_id;
   if (lookahead_assertion_id == -1) {
     return true;
@@ -220,8 +232,10 @@ bool GrammarStateMatcherForInitContext::IsTokenPassLookaheadAssertion(
 }
 
 inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens(
-    int vocab_size, const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
-    bool consider_parent_rule) {
+    int vocab_size,
+    const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
+    bool consider_parent_rule
+) {
   tmp_accepted_indices_.clear();
   tmp_rejected_indices_.clear();
   tmp_uncertain_indices_.clear();
@@ -253,10 +267,12 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
         RollbackChars(prev_matched_size - lcp_len);
         tmp_can_reach_end_stack_.erase(
             tmp_can_reach_end_stack_.end() - (prev_matched_size - lcp_len),
-            tmp_can_reach_end_stack_.end());
+            tmp_can_reach_end_stack_.end()
+        );
         tmp_can_reach_end_prefix_or_stack_.erase(
             tmp_can_reach_end_prefix_or_stack_.end() - (prev_matched_size - lcp_len),
-            tmp_can_reach_end_prefix_or_stack_.end());
+            tmp_can_reach_end_prefix_or_stack_.end()
+        );
       }
       prev_matched_size = std::min(prev_matched_size, lcp_len);
     }
@@ -269,8 +285,9 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
           break;
         }
         tmp_can_reach_end_stack_.push_back(CanReachEnd());
-        tmp_can_reach_end_prefix_or_stack_.push_back(tmp_can_reach_end_stack_.back() ||
-                                                     tmp_can_reach_end_prefix_or_stack_.back());
+        tmp_can_reach_end_prefix_or_stack_.push_back(
+            tmp_can_reach_end_stack_.back() || tmp_can_reach_end_prefix_or_stack_.back()
+        );
         prev_matched_size = j + 1;
       }
     }
@@ -279,8 +296,7 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
 
     if (accepted) {
       tmp_accepted_indices_.push_back(i);
-    } else if (can_reach_end && consider_parent_rule &&
-               IsTokenPassLookaheadAssertion(token, tmp_can_reach_end_stack_)) {
+    } else if (can_reach_end && consider_parent_rule && IsTokenPassLookaheadAssertion(token, tmp_can_reach_end_stack_)) {
       // 1. If the current rule is the main rule (consider_parent_rule=false), there are no
       // uncertain tokens. Not accepted tokens are just rejected.
       // 2. If a token cannot pass the lookahead assertion, it is rejected.
@@ -291,13 +307,19 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
   }
   // Rollback the last matched part
   RollbackChars(prev_matched_size);
-  return CatagorizedTokens(vocab_size, sorted_token_table, tmp_accepted_indices_,
-                           tmp_rejected_indices_, tmp_uncertain_indices_);
+  return CatagorizedTokens(
+      vocab_size,
+      sorted_token_table,
+      tmp_accepted_indices_,
+      tmp_rejected_indices_,
+      tmp_uncertain_indices_
+  );
 }
 
 inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitContext(
-    const BNFGrammar& grammar, const std::vector<std::string>& token_table) {
-  using RuleExprType = BNFGrammarNode::RuleExprType;
+    const BNFGrammar& grammar, const std::vector<std::string>& token_table
+) {
+  using RuleExprType = BNFGrammar::Impl::RuleExprType;
   auto ptr = std::make_shared<GrammarStateInitContext>();
 
   ptr->grammar = grammar;
@@ -319,8 +341,7 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
     if (token == "</s>" || token == "<|end_of_text|>" || token == "<|eot_id|>" ||
         token == "<|endoftext|>" || token == "<eos>" || token == "<end_of_turn>") {
       ptr->stop_token_ids.push_back(i);
-    } else if ((token[0] == '<' && token.back() == '>' && token.size() >= 3) ||
-               token == "[@BOS@]") {
+    } else if ((token[0] == '<' && token.back() == '>' && token.size() >= 3) || token == "[@BOS@]") {
       // gemma treats [@BOS@] as a special token
       ptr->special_token_ids.insert(i);
     } else {
@@ -341,13 +362,13 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
   for (int rule_id = 0; rule_id < static_cast<int>(grammar->NumRules()); ++rule_id) {
     auto rule = grammar->GetRule(rule_id);
     auto rule_body = grammar->GetRuleExpr(rule.body_expr_id);
-    DCHECK(rule_body.type == RuleExprType::kChoices);
+    XGRAMMAR_DCHECK(rule_body.type == RuleExprType::kChoices);
     for (auto sequence_id : rule_body) {
       auto sequence = grammar->GetRuleExpr(sequence_id);
       if (sequence.type == RuleExprType::kEmptyStr) {
         continue;
       }
-      DCHECK(sequence.type == RuleExprType::kSequence);
+      XGRAMMAR_DCHECK(sequence.type == RuleExprType::kSequence);
       for (int element_id = 0; element_id < sequence.size(); ++element_id) {
         auto element = grammar->GetRuleExpr(sequence[element_id]);
         if (element.type == RuleExprType::kRuleRef) {
@@ -357,7 +378,8 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
         auto add_catagorized_tokens = [&](const RulePosition& rule_position) {
           auto grammar_state_matcher = GrammarStateMatcherForInitContext(grammar, rule_position);
           auto cur_catagorized_tokens_for_grammar = grammar_state_matcher.GetCatagorizedTokens(
-              ptr->vocab_size, ptr->sorted_token_table, rule_id != main_rule_id);
+              ptr->vocab_size, ptr->sorted_token_table, rule_id != main_rule_id
+          );
           ptr->catagorized_tokens_for_grammar[rule_position] = cur_catagorized_tokens_for_grammar;
         };
 
@@ -368,8 +390,10 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
             add_catagorized_tokens(cur_rule_position);
           }
         } else {
-          DCHECK(element.type == RuleExprType::kCharacterClassStar ||
-                 element.type == RuleExprType::kCharacterClass);
+          XGRAMMAR_DCHECK(
+              element.type == RuleExprType::kCharacterClassStar ||
+              element.type == RuleExprType::kCharacterClass
+          );
           for (int left_utf8_bytes = 0; left_utf8_bytes <= 3; ++left_utf8_bytes) {
             cur_rule_position.left_utf8_bytes = left_utf8_bytes;
             add_catagorized_tokens(cur_rule_position);
@@ -385,8 +409,8 @@ class GrammarInitContextCacheImpl : public GrammarInitContextCacheNode {
  public:
   GrammarInitContextCacheImpl(const std::vector<std::string>& token_table);
 
-  std::shared_ptr<GrammarStateInitContext> GetInitContextForJSONSchema(
-      const std::string& schema) final;
+  std::shared_ptr<GrammarStateInitContext> GetInitContextForJSONSchema(const std::string& schema
+  ) final;
 
   std::shared_ptr<GrammarStateInitContext> GetInitContextForJSON() final;
 
@@ -403,7 +427,8 @@ class GrammarInitContextCacheImpl : public GrammarInitContextCacheNode {
 };
 
 inline GrammarInitContextCacheImpl::GrammarInitContextCacheImpl(
-    const std::vector<std::string>& token_table)
+    const std::vector<std::string>& token_table
+)
     : token_table_(token_table) {
   init_ctx_for_json_ =
       GrammarStateMatcher::CreateInitContext(BNFGrammar::GetGrammarOfJSON(), token_table_);
@@ -421,8 +446,8 @@ GrammarInitContextCacheImpl::GetInitContextForJSONSchema(const std::string& sche
   return init_ctx;
 }
 
-inline std::shared_ptr<GrammarStateInitContext>
-GrammarInitContextCacheImpl::GetInitContextForJSON() {
+inline std::shared_ptr<GrammarStateInitContext> GrammarInitContextCacheImpl::GetInitContextForJSON(
+) {
   return init_ctx_for_json_;
 }
 
@@ -431,8 +456,6 @@ inline void GrammarInitContextCacheImpl::Clear() { init_ctx_for_schema_cache_.cl
 GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>& token_table)
     : ObjectRef(make_object<GrammarInitContextCacheImpl>(token_table)) {}
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
+#endif  // XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_

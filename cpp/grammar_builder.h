@@ -4,32 +4,29 @@
  * \brief The header for the building the BNF AST.
  */
 
-#ifndef MLC_LLM_GRAMMAR_GRAMMAR_BUILDER_H_
-#define MLC_LLM_GRAMMAR_GRAMMAR_BUILDER_H_
-#include <tvm/runtime/object.h>
+#ifndef XGRAMMAR_GRAMMAR_BUILDER_H_
+#define XGRAMMAR_GRAMMAR_BUILDER_H_
+
+#include <xgrammar/grammar.h>
 
 #include <cstdint>
+#include <unordered_map>
 
-#include "grammar.h"
+#include "grammar_ast.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
-
-using namespace tvm;
-using namespace tvm::runtime;
+namespace xgrammar {
 
 /*!
  * \brief Helper class to build a BNF grammar.
  */
 class BNFGrammarBuilder {
  public:
-  using Rule = BNFGrammarNode::Rule;
-  using RuleExprType = BNFGrammarNode::RuleExprType;
-  using RuleExpr = BNFGrammarNode::RuleExpr;
+  using Rule = BNFGrammar::Impl::Rule;
+  using RuleExprType = BNFGrammar::Impl::RuleExprType;
+  using RuleExpr = BNFGrammar::Impl::RuleExpr;
 
   /*! \brief Default constructor. Creates a new grammar object. */
-  BNFGrammarBuilder() : grammar_(make_object<BNFGrammarNode>()) {}
+  BNFGrammarBuilder() : grammar_(std::make_shared<BNFGrammar::Impl>()) {}
 
   /*!
    * \brief Get the result grammar. This function will also set the main rule to the rule with the
@@ -38,7 +35,8 @@ class BNFGrammarBuilder {
    */
   BNFGrammar Get(const std::string& main_rule = "main") {
     int32_t main_rule_id = GetRuleId(main_rule);
-    CHECK(main_rule_id != -1) << "The main rule with name \"" << main_rule << "\" is not found.";
+    XGRAMMAR_CHECK(main_rule_id != -1)
+        << "The main rule with name \"" << main_rule << "\" is not found.";
     grammar_->main_rule_id_ = main_rule_id;
 
     return BNFGrammar(grammar_);
@@ -51,8 +49,9 @@ class BNFGrammarBuilder {
     grammar_->rule_expr_indptr_.push_back(grammar_->rule_expr_data_.size());
     grammar_->rule_expr_data_.push_back(static_cast<int32_t>(rule_expr.type));
     grammar_->rule_expr_data_.push_back(rule_expr.data_len);
-    grammar_->rule_expr_data_.insert(grammar_->rule_expr_data_.end(), rule_expr.data,
-                                     rule_expr.data + rule_expr.data_len);
+    grammar_->rule_expr_data_.insert(
+        grammar_->rule_expr_data_.end(), rule_expr.data, rule_expr.data + rule_expr.data_len
+    );
     return static_cast<int32_t>(grammar_->rule_expr_indptr_.size()) - 1;
   }
 
@@ -62,8 +61,8 @@ class BNFGrammarBuilder {
    * The string is stored in int32 vector to match the storage format of the grammar.
    */
   int32_t AddByteString(const std::vector<int32_t>& bytes) {
-    return AddRuleExpr(
-        {RuleExprType::kByteString, bytes.data(), static_cast<int32_t>(bytes.size())});
+    return AddRuleExpr({RuleExprType::kByteString, bytes.data(), static_cast<int32_t>(bytes.size())}
+    );
   }
 
   /*!
@@ -80,8 +79,9 @@ class BNFGrammarBuilder {
    * \param elements A vector of CharacterClassElement, each containing a lower and a upper bound.
    * \param is_negative Whether the character class is negated.
    */
-  int32_t AddCharacterClass(const std::vector<CharacterClassElement>& elements,
-                            bool is_negative = false) {
+  int32_t AddCharacterClass(
+      const std::vector<CharacterClassElement>& elements, bool is_negative = false
+  ) {
     std::vector<int32_t> data;
     data.reserve(1 + elements.size() * 2);
     data.push_back(static_cast<int32_t>(is_negative));
@@ -90,7 +90,8 @@ class BNFGrammarBuilder {
       data.push_back(range.upper);
     }
     return AddRuleExpr(
-        {RuleExprType::kCharacterClass, data.data(), static_cast<int32_t>(data.size())});
+        {RuleExprType::kCharacterClass, data.data(), static_cast<int32_t>(data.size())}
+    );
   }
 
   /*!
@@ -98,8 +99,9 @@ class BNFGrammarBuilder {
    * \param elements A vector of CharacterClassElement, each containing a lower and a upper bound.
    * \param is_negative Whether the character class is negated.
    */
-  int32_t AddCharacterClassStar(const std::vector<CharacterClassElement>& elements,
-                                bool is_negative = false) {
+  int32_t AddCharacterClassStar(
+      const std::vector<CharacterClassElement>& elements, bool is_negative = false
+  ) {
     std::vector<int32_t> data;
     data.reserve(1 + elements.size() * 2);
     data.push_back(static_cast<int32_t>(is_negative));
@@ -108,7 +110,8 @@ class BNFGrammarBuilder {
       data.push_back(range.upper);
     }
     return AddRuleExpr(
-        {RuleExprType::kCharacterClassStar, data.data(), static_cast<int32_t>(data.size())});
+        {RuleExprType::kCharacterClassStar, data.data(), static_cast<int32_t>(data.size())}
+    );
   }
 
   /*! \brief Add a RuleExpr for empty string.*/
@@ -124,13 +127,15 @@ class BNFGrammarBuilder {
   /*! \brief Add a RuleExpr for RuleExpr sequence.*/
   int32_t AddSequence(const std::vector<int32_t>& elements) {
     return AddRuleExpr(
-        {RuleExprType::kSequence, elements.data(), static_cast<int32_t>(elements.size())});
+        {RuleExprType::kSequence, elements.data(), static_cast<int32_t>(elements.size())}
+    );
   }
 
   /*! \brief Add a RuleExpr for RuleExpr choices.*/
   int32_t AddChoices(const std::vector<int32_t>& choices) {
     return AddRuleExpr(
-        {RuleExprType::kChoices, choices.data(), static_cast<int32_t>(choices.size())});
+        {RuleExprType::kChoices, choices.data(), static_cast<int32_t>(choices.size())}
+    );
   }
 
   size_t NumRuleExprs() const { return grammar_->NumRuleExprs(); }
@@ -144,7 +149,7 @@ class BNFGrammarBuilder {
     int32_t id = grammar_->rules_.size();
     auto rules = grammar_->rules_;
     grammar_->rules_.push_back(rule);
-    CHECK_EQ(rule_name_to_id_.count(rule.name), 0);
+    XGRAMMAR_CHECK(rule_name_to_id_.count(rule.name) == 0);
     rule_name_to_id_[rule.name] = id;
     return id;
   }
@@ -175,7 +180,7 @@ class BNFGrammarBuilder {
    * rule body of a rule inserted by BNFGrammarBuilder::AddEmptyRule.
    */
   void UpdateRuleBody(int32_t rule_id, int32_t body_expr_id) {
-    CHECK(rule_id >= 0 && rule_id < static_cast<int32_t>(grammar_->rules_.size()))
+    XGRAMMAR_CHECK(rule_id >= 0 && rule_id < static_cast<int32_t>(grammar_->rules_.size()))
         << "Rule id " << rule_id << " is out of range.";
     grammar_->rules_[rule_id].body_expr_id = body_expr_id;
   }
@@ -186,7 +191,7 @@ class BNFGrammarBuilder {
    */
   void UpdateRuleBody(std::string rule_name, int32_t body_expr_id) {
     int32_t rule_id = GetRuleId(rule_name);
-    CHECK(rule_id != -1) << "Rule " << rule_name << " is not found.";
+    XGRAMMAR_CHECK(rule_id != -1) << "Rule " << rule_name << " is not found.";
     UpdateRuleBody(rule_id, body_expr_id);
   }
 
@@ -195,9 +200,9 @@ class BNFGrammarBuilder {
    * assertion should be a sequence RuleExpr id. An id of -1 means no lookahead assertion.
    */
   void AddLookaheadAssertion(int32_t rule_id, int32_t lookahead_assertion_id) {
-    CHECK(rule_id < static_cast<int32_t>(grammar_->rules_.size()))
+    XGRAMMAR_CHECK(rule_id < static_cast<int32_t>(grammar_->rules_.size()))
         << "Rule id " << rule_id << " is out of range.";
-    CHECK(grammar_->rules_[rule_id].lookahead_assertion_id == -1)
+    XGRAMMAR_CHECK(grammar_->rules_[rule_id].lookahead_assertion_id == -1)
         << "Rule " << rule_id << " already has a lookahead assertion.";
     grammar_->rules_[rule_id].lookahead_assertion_id = lookahead_assertion_id;
   }
@@ -208,7 +213,7 @@ class BNFGrammarBuilder {
    */
   void AddLookaheadAssertion(std::string rule_name, int32_t lookahead_assertion_id) {
     int32_t rule_id = GetRuleId(rule_name);
-    CHECK(rule_id != -1) << "Rule " << rule_name << " is not found.";
+    XGRAMMAR_CHECK(rule_id != -1) << "Rule " << rule_name << " is not found.";
     AddLookaheadAssertion(rule_id, lookahead_assertion_id);
   }
 
@@ -242,13 +247,11 @@ class BNFGrammarBuilder {
 
  private:
   // Mutable pointer to the grammar object.
-  ObjectPtr<BNFGrammarNode> grammar_;
+  std::shared_ptr<BNFGrammar::Impl> grammar_;
   // Map from rule name to rule id.
   std::unordered_map<std::string, int32_t> rule_name_to_id_;
 };
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_GRAMMAR_BUILDER_H_
+#endif  // XGRAMMAR_GRAMMAR_BUILDER_H_

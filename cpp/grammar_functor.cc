@@ -5,11 +5,9 @@
 
 #include "grammar_functor.h"
 
-#include "../support/encoding.h"
+#include <xgrammar/support/encoding.h>
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 /*!
  * \brief Eliminates single-element sequence or choice or character class in the grammar.
@@ -28,8 +26,8 @@ class SingleElementExprEliminator : public BNFGrammarMutator {
     if (lookahead_assertion_id == -1) {
       return -1;
     }
-    auto rule_expr = grammar_->GetRuleExpr(lookahead_assertion_id);
-    CHECK(rule_expr.type == RuleExprType::kSequence);
+    auto rule_expr = grammar_.->GetRuleExpr(lookahead_assertion_id);
+    XGRAMMAR_CHECK(rule_expr.type == RuleExprType::kSequence);
 
     std::vector<int32_t> sequence_ids;
     for (int32_t i : rule_expr) {
@@ -134,7 +132,7 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
       case RuleExprType::kRuleRef:
         return builder_.AddChoices({builder_.AddSequence({builder_.AddRuleExpr(rule_expr)})});
       default:
-        LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
+        XGRAMMAR_LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
   }
 
@@ -164,7 +162,7 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
           VisitElementInChoices(choice_expr, &new_choice_ids);
           break;
         default:
-          LOG(FATAL) << "Unexpected choice type: " << static_cast<int>(choice_expr.type);
+          XGRAMMAR_LOG(FATAL) << "Unexpected choice type: " << static_cast<int>(choice_expr.type);
       }
     }
     if (found_empty) {
@@ -175,8 +173,9 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
   }
 
   /*! \brief Visit a sequence RuleExpr that is one of a list of choices. */
-  void VisitSequenceInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
-                              bool* found_empty) {
+  void VisitSequenceInChoices(
+      const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids, bool* found_empty
+  ) {
     auto sub_sequence_ids = VisitSequence_(rule_expr);
     if (sub_sequence_ids.size() == 0) {
       *found_empty = true;
@@ -186,14 +185,16 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
   }
 
   /*! \brief Visit a choice RuleExpr that is one of a list of choices. */
-  void VisitChoicesInChoices(const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids,
-                             bool* found_empty) {
+  void VisitChoicesInChoices(
+      const RuleExpr& rule_expr, std::vector<int32_t>* new_choice_ids, bool* found_empty
+  ) {
     auto sub_choice_ids = VisitChoices_(rule_expr);
     bool contains_empty = builder_.GetRuleExpr(sub_choice_ids[0]).type == RuleExprType::kEmptyStr;
     if (contains_empty) {
       *found_empty = true;
-      new_choice_ids->insert(new_choice_ids->end(), sub_choice_ids.begin() + 1,
-                             sub_choice_ids.end());
+      new_choice_ids->insert(
+          new_choice_ids->end(), sub_choice_ids.begin() + 1, sub_choice_ids.end()
+      );
     } else {
       new_choice_ids->insert(new_choice_ids->end(), sub_choice_ids.begin(), sub_choice_ids.end());
     }
@@ -229,7 +230,8 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
           VisitElementInSequence(element_expr, &new_sequence_ids);
           break;
         default:
-          LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(element_expr.type);
+          XGRAMMAR_LOG(FATAL) << "Unexpected sequence type: "
+                              << static_cast<int>(element_expr.type);
       }
     }
     return new_sequence_ids;
@@ -238,8 +240,9 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
   /*! \brief Visit a sequence RuleExpr that is one element in another sequence. */
   void VisitSequenceInSequence(const RuleExpr& rule_expr, std::vector<int32_t>* new_sequence_ids) {
     auto sub_sequence_ids = VisitSequence_(rule_expr);
-    new_sequence_ids->insert(new_sequence_ids->end(), sub_sequence_ids.begin(),
-                             sub_sequence_ids.end());
+    new_sequence_ids->insert(
+        new_sequence_ids->end(), sub_sequence_ids.begin(), sub_sequence_ids.end()
+    );
   }
 
   /*! \brief Visit a choice RuleExpr that is one element in a sequence. */
@@ -248,8 +251,9 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
     if (sub_choice_ids.size() == 1) {
       auto choice_element_expr = builder_.GetRuleExpr(sub_choice_ids[0]);
       if (choice_element_expr.type != RuleExprType::kEmptyStr) {
-        new_sequence_ids->insert(new_sequence_ids->end(), choice_element_expr.begin(),
-                                 choice_element_expr.end());
+        new_sequence_ids->insert(
+            new_sequence_ids->end(), choice_element_expr.begin(), choice_element_expr.end()
+        );
       }
     } else {
       auto new_choice_id = builder_.AddChoices(sub_choice_ids);
@@ -315,6 +319,4 @@ BNFGrammar BNFGrammarNormalizer::Apply(const BNFGrammar& grammar) {
   return grammar_;
 }
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar

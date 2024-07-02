@@ -1,113 +1,229 @@
 /*!
  *  Copyright (c) 2023 by Contributors
- * \file support/encoding.h
- * \brief Encoding and decoding from/to UTF-8 and escape sequence to/from codepoints.
+ * \file support/encoding.cc
  */
-#ifndef MLC_LLM_SUPPORT_ENCODING_H_
-#define MLC_LLM_SUPPORT_ENCODING_H_
+#include <support/encoding.h>
+#include <support/logging.h>
 
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include <array>
 
-namespace mlc {
-namespace llm {
+namespace xgrammar {
 
-/*! \brief Represents a unicode codepoint. */
-using TCodepoint = int32_t;
+std::string PrintAsUTF8(TCodepoint codepoint) {
+  XGRAMMAR_DCHECK(codepoint <= 0x10FFFF) << "Invalid codepoint: " << codepoint;
+  std::string utf8;
+  if (codepoint <= 0x7F) {
+    // 1-byte sequence
+    utf8 += static_cast<char>(codepoint);
+  } else if (codepoint <= 0x7FF) {
+    // 2-byte sequence
+    utf8 += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+    utf8 += static_cast<char>(0x80 | (codepoint & 0x3F));
+  } else if (codepoint <= 0xFFFF) {
+    // 3-byte sequence
+    utf8 += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+    utf8 += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+    utf8 += static_cast<char>(0x80 | (codepoint & 0x3F));
+  } else {
+    // 4-byte sequence
+    utf8 += static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07));
+    utf8 += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+    utf8 += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+    utf8 += static_cast<char>(0x80 | (codepoint & 0x3F));
+  }
+  return utf8;
+}
 
-/*!
- * \brief Handle the utf-8 first byte.
- * \returns (is_valid, total_number_of_bytes, initial_codepoint).
- */
-std::tuple<bool, int, TCodepoint> HandleUTF8FirstByte(uint8_t byte);
-
-/*!
- * \brief Print a codepoint to a UTF-8 string.
- * \param codepoint The codepoint.
- * \return The UTF-8 string.
- */
-std::string PrintAsUTF8(TCodepoint codepoint);
-
-/*!
- * \brief Print a codepoint to a escaped string. If the codepoint is not printable, it will be
- * escaped. By default the function support escape sequences in C ("\n", "\t", "\u0123"). User can
- * specify more escape sequences using additional_escape_map.
- * \param codepoint The codepoint.
- * \param additional_escape_map A map from codepoint to escape sequence. If the codepoint is in the
- * map, it will be escaped using the corresponding escape sequence. e.g. {{'-', "\\-"}}. \return The
- * printable string.
- */
 std::string PrintAsEscaped(
-    TCodepoint codepoint,
-    const std::unordered_map<TCodepoint, std::string>& additional_escape_map = {});
+    TCodepoint codepoint, const std::unordered_map<TCodepoint, std::string>& additional_escape_map
+) {
+  static const std::unordered_map<TCodepoint, std::string> kCodepointToEscape = {
+      {'\'', "\\\'"},
+      {'\"', "\\\""},
+      {'\?', "\\\?"},
+      {'\\', "\\\\"},
+      {'\a', "\\a"},
+      {'\b', "\\b"},
+      {'\f', "\\f"},
+      {'\n', "\\n"},
+      {'\r', "\\r"},
+      {'\t', "\\t"},
+      {'\v', "\\v"},
+      {'\0', "\\0"},
+      {'\x1B', "\\e"}};
 
-/*!
- * \brief Print the given char to a escaped string that can be printed.
- * \return The escaped string.
- */
-std::string PrintAsEscaped(uint8_t raw_char);
+  if (auto it = additional_escape_map.find(codepoint); it != additional_escape_map.end()) {
+    return it->second;
+  }
 
-/*!
- * \brief Print the given string to a escaped string that can be printed.
- * \return The escaped string.
- */
-std::string PrintAsEscaped(std::string raw_str);
+  if (auto it = kCodepointToEscape.find(codepoint); it != kCodepointToEscape.end()) {
+    return it->second;
+  }
 
-/*!
- * \brief Represents an error when handling characters. Will be returned as a special TCodepoint
- * value.
- */
-enum CharHandlingError : TCodepoint {
-  /*! \brief The UTF-8 string is invalid. */
-  kInvalidUTF8 = -10,
-  /*! \brief The escape sequence is invalid. */
-  kInvalidEscape = -11,
-};
+  if (codepoint >= 0x20 && codepoint <= 0x7E) {
+    return std::string({static_cast<char>(codepoint)});
+  }
 
-/*!
- * \brief The method to handle invalid UTF-8 sequence.
- */
-enum class UTF8ErrorPolicy {
-  /*! \brief Return an error codepoint when an error is encountered. */
-  kReturnInvalid,
-  /*! \brief Skip the error and continue parsing. */
-  kReturnByte,
-};
+  // convert codepoint to hex
+  char prefix = codepoint <= 0xFF ? 'x' : codepoint <= 0xFFFF ? 'u' : 'U';
+  int width = codepoint <= 0xFF ? 2 : codepoint <= 0xFFFF ? 4 : 8;
+  std::stringstream ss;
+  ss << std::setfill('0') << std::setw(width) << std::hex << codepoint;
+  auto hex = ss.str();
+  return std::string("\\") + prefix + hex;
+}
 
-/*!
- * \brief Parse the first codepoint in a UTF-8 string.
- * \param utf8 The UTF-8 string.
- * \return The codepoint and new pointer. If the UTF-8 string is invalid, and the error policy is
- * kReturnInvalid, the function returns (CharHandlingError::kInvalidUTF8, input char pointer).
- */
-std::pair<TCodepoint, const char*> ParseNextUTF8(
-    const char* utf8, UTF8ErrorPolicy error_policy = UTF8ErrorPolicy::kReturnInvalid);
+std::string PrintAsEscaped(uint8_t raw_char) { return PrintAsEscaped(raw_char); }
 
-/*!
- * \brief Parse all codepoints in a UTF-8 string.
- * \param utf8 The UTF-8 string.
- * \return All codepoints. If the UTF-8 string is invalid, and the error policy is
- * kReturnInvalid, the function returns {CharHandlingError::kInvalidUTF8}.
- */
-std::vector<TCodepoint> ParseUTF8(const char* utf8,
-                                  UTF8ErrorPolicy error_policy = UTF8ErrorPolicy::kReturnInvalid);
+std::string PrintAsEscaped(std::string raw_str) {
+  std::string res;
+  auto codepoints = ParseUTF8(raw_str.c_str(), UTF8ErrorPolicy::kReturnByte);
+  for (auto c : codepoints) {
+    res += PrintAsEscaped(c);
+  }
+  return res;
+}
 
-/*!
- * \brief Parse the first codepoint from a UTF-8 string. Also checks escape sequences and converts
- * the escaped char to its original value.
- * \param utf8 The UTF-8 string or the escape sequence.
- * \param additional_escape_map A map from escape sequence to codepoint. If the escape sequence is
- * in the map, it will be converted to the corresponding codepoint. e.g. {{"\\-", '-'}}.
- * \return The codepoint and the new pointer. If the UTF-8 string or the escape sequence is
- * invalid, and the error policy is kReturnInvalid, the function returns
- * (CharHandlingError::kInvalidUTF8, input char pointer).
- */
+std::tuple<bool, int, TCodepoint> HandleUTF8FirstByte(uint8_t byte) {
+  static const std::array<int8_t, 5> kFirstByteMask = {0x00, 0x7F, 0x1F, 0x0F, 0x07};
+  // clang-format off
+  static const std::array<int, 256> kUtf8Bytes = {
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+     1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
+     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
+     3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
+     4,  4,  4,  4,  4,  4,  4,  4, -1, -1, -1, -1, -1, -1, -1, -1,
+  };
+  // clang-format on
+  auto num_bytes = kUtf8Bytes[static_cast<uint8_t>(byte)];
+  if (num_bytes == -1) {
+    return {false, 0, 0};
+  }
+  return {true, num_bytes, byte & kFirstByteMask[num_bytes]};
+}
+
+std::pair<TCodepoint, const char*> ParseNextUTF8(const char* utf8, UTF8ErrorPolicy error_policy) {
+  auto [accepted, num_bytes, res] = HandleUTF8FirstByte(utf8[0]);
+  if (accepted) {
+    for (int i = 1; i < num_bytes; ++i) {
+      if (utf8[i] == 0 || (static_cast<uint8_t>(utf8[i]) & 0xC0) != 0x80) {
+        // invalid utf8
+        accepted = false;
+        break;
+      }
+      res = (res << 6) | (static_cast<uint8_t>(utf8[i]) & 0x3F);
+    }
+  }
+
+  if (!accepted) {
+    // invalid utf8
+    if (error_policy == UTF8ErrorPolicy::kReturnInvalid) {
+      return {CharHandlingError::kInvalidUTF8, utf8};
+    } else {
+      return {static_cast<unsigned char>(utf8[0]), utf8 + 1};
+    }
+  }
+
+  return {res, utf8 + num_bytes};
+}
+
+std::vector<TCodepoint> ParseUTF8(const char* utf8, UTF8ErrorPolicy error_policy) {
+  std::vector<TCodepoint> codepoints;
+  while (*utf8 != 0) {
+    TCodepoint codepoint;
+    std::tie(codepoint, utf8) = ParseNextUTF8(utf8, error_policy);
+    if (codepoint == CharHandlingError::kInvalidUTF8) {
+      return {codepoint};
+    }
+    codepoints.push_back(codepoint);
+  }
+  return codepoints;
+}
+
+inline int HexCharToInt(char c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  } else if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  } else if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
+  } else {
+    return -1;
+  }
+}
+
 std::pair<TCodepoint, const char*> ParseNextUTF8OrEscaped(
-    const char* utf8,
-    const std::unordered_map<std::string, TCodepoint>& additional_escape_map = {});
+    const char* utf8, const std::unordered_map<std::string, TCodepoint>& additional_escape_map
+) {
+  static const std::unordered_map<std::string, TCodepoint> kEscapeToCodepoint = {
+      {"\\\'", '\''},
+      {"\\\"", '\"'},
+      {"\\\?", '\?'},
+      {"\\\\", '\\'},
+      {"\\a", '\a'},
+      {"\\b", '\b'},
+      {"\\f", '\f'},
+      {"\\n", '\n'},
+      {"\\r", '\r'},
+      {"\\t", '\t'},
+      {"\\v", '\v'},
+      {"\\0", '\0'},
+      {"\\e", '\x1B'}};
+  if (utf8[0] != '\\') {
+    return ParseNextUTF8(utf8, UTF8ErrorPolicy::kReturnInvalid);
+  }
 
-}  // namespace llm
-}  // namespace mlc
+  auto escape_sequence = std::string(utf8, 2);
+  if (auto it = additional_escape_map.find(escape_sequence); it != additional_escape_map.end()) {
+    return {it->second, utf8 + 2};
+  }
+  if (auto it = kEscapeToCodepoint.find(escape_sequence); it != kEscapeToCodepoint.end()) {
+    return {it->second, utf8 + 2};
+  }
 
-#endif  // MLC_LLM_SUPPORT_ENCODING_H_
+  if (utf8[1] == 'x') {
+    // arbitrary length hex
+    int len = 0;
+    int32_t codepoint = 0;
+    while (true) {
+      auto digit = HexCharToInt(utf8[2 + len]);
+      if (digit == -1) {
+        break;
+      }
+      codepoint = codepoint * 16 + digit;
+      ++len;
+    }
+    if (len == 0) {
+      return {CharHandlingError::kInvalidEscape, utf8};
+    }
+    return {codepoint, utf8 + len + 2};
+  } else if (utf8[1] == 'u' || utf8[1] == 'U') {
+    // 4- or 8-digit hex
+    int len = utf8[1] == 'u' ? 4 : 8;
+    int32_t codepoint = 0;
+
+    for (int i = 0; i < len; ++i) {
+      auto digit = HexCharToInt(utf8[i + 2]);
+      if (digit == -1) {
+        return {CharHandlingError::kInvalidEscape, utf8};
+      }
+      codepoint = codepoint * 16 + digit;
+    }
+    return {codepoint, utf8 + len + 2};
+  } else {
+    return {CharHandlingError::kInvalidEscape, utf8};
+  }
+}
+
+}  // namespace xgrammar

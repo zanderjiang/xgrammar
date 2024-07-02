@@ -3,15 +3,14 @@
  * \file support/encoding.h
  * \brief Encoding and decoding from/to UTF-8 and escape sequence to/from codepoints.
  */
-#ifndef MLC_LLM_SUPPORT_ENCODING_H_
-#define MLC_LLM_SUPPORT_ENCODING_H_
+#ifndef XGRAMMAR_SUPPORT_ENCODING_H_
+#define XGRAMMAR_SUPPORT_ENCODING_H_
 
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace mlc {
-namespace llm {
+namespace xgrammar {
 
 /*! \brief Represents a unicode codepoint. */
 using TCodepoint = int32_t;
@@ -38,7 +37,7 @@ std::string PrintAsUTF8(TCodepoint codepoint);
  * map, it will be escaped using the corresponding escape sequence. e.g. {{'-', "\\-"}}. \return The
  * printable string.
  */
-std::string PrintAsEscaped(
+std::string PrintAsEscapedUTF8(
     TCodepoint codepoint,
     const std::unordered_map<TCodepoint, std::string>& additional_escape_map = {});
 
@@ -46,13 +45,13 @@ std::string PrintAsEscaped(
  * \brief Print the given char to a escaped string that can be printed.
  * \return The escaped string.
  */
-std::string PrintAsEscaped(uint8_t raw_char);
+std::string PrintAsEscapedUTF8(uint8_t raw_char);
 
 /*!
  * \brief Print the given string to a escaped string that can be printed.
  * \return The escaped string.
  */
-std::string PrintAsEscaped(std::string raw_str);
+std::string PrintAsEscapedUTF8(std::string raw_str);
 
 /*!
  * \brief Represents an error when handling characters. Will be returned as a special TCodepoint
@@ -107,7 +106,6 @@ std::pair<TCodepoint, const char*> ParseNextUTF8OrEscaped(
     const char* utf8,
     const std::unordered_map<std::string, TCodepoint>& additional_escape_map = {});
 
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_SUPPORT_ENCODING_H_
+#endif  // XGRAMMAR_SUPPORT_ENCODING_H_

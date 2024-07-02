@@ -4,16 +4,14 @@
  * \brief The header for translating JSON schema to EBNF grammar.
  */
 
-#ifndef MLC_LLM_GRAMMAR_JSON_SCHEMA_CONVERTER_H_
-#define MLC_LLM_GRAMMAR_JSON_SCHEMA_CONVERTER_H_
+#ifndef XGRAMMAR_JSON_SCHEMA_CONVERTER_H_
+#define XGRAMMAR_JSON_SCHEMA_CONVERTER_H_
 
 #include <optional>
 #include <string>
 #include <utility>
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 /*!
  * \brief Convert JSON schema string to EBNF grammar string.
@@ -33,12 +31,12 @@ namespace serve {
  * \returns The EBNF grammar string.
  */
 std::string JSONSchemaToEBNF(
-    std::string schema, std::optional<int> indent = 2,
+    std::string schema,
+    std::optional<int> indent = 2,
     std::optional<std::pair<std::string, std::string>> separators = std::nullopt,
-    bool strict_mode = true);
+    bool strict_mode = true
+);
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_JSON_SCHEMA_CONVERTER_H_
+#endif  // XGRAMMAR_JSON_SCHEMA_CONVERTER_H_

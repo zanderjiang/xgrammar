@@ -10,9 +10,7 @@
 
 #include "../support/encoding.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 using namespace tvm::runtime;
 
@@ -46,7 +44,7 @@ std::string BNFGrammarPrinter::PrintRuleExpr(const RuleExpr& rule_expr) {
     case RuleExprType::kChoices:
       return PrintChoices(rule_expr);
     default:
-      LOG(FATAL) << "Unexpected RuleExpr type: " << static_cast<int>(rule_expr.type);
+      XGRAMMAR_LOG(FATAL) << "Unexpected RuleExpr type: " << static_cast<int>(rule_expr.type);
   }
 }
 
@@ -63,26 +61,26 @@ std::string BNFGrammarPrinter::PrintByteString(const RuleExpr& rule_expr) {
   auto codepoints = ParseUTF8(internal_str.c_str(), UTF8ErrorPolicy::kReturnByte);
   std::string result;
   for (auto codepoint : codepoints) {
-    result += PrintAsEscaped(codepoint);
+    result += PrintAsEscapedUTF8(codepoint);
   }
   return "\"" + result + "\"";
 }
 
 std::string BNFGrammarPrinter::PrintCharacterClass(const RuleExpr& rule_expr) {
-  static const std::unordered_map<TCodepoint, std::string> kCustomEscapeMap = {{'-', "\\-"},
-                                                                               {']', "\\]"}};
+  static const std::unordered_map<TCodepoint, std::string> kCustomEscapeMap = {
+      {'-', "\\-"}, {']', "\\]"}};
   std::string result = "[";
   bool is_negative = static_cast<bool>(rule_expr[0]);
   if (is_negative) {
     result += "^";
   }
   for (auto i = 1; i < rule_expr.data_len; i += 2) {
-    result += PrintAsEscaped(rule_expr[i], kCustomEscapeMap);
+    result += PrintAsEscapedUTF8(rule_expr[i], kCustomEscapeMap);
     if (rule_expr[i] == rule_expr[i + 1]) {
       continue;
     }
     result += "-";
-    result += PrintAsEscaped(rule_expr[i + 1], kCustomEscapeMap);
+    result += PrintAsEscapedUTF8(rule_expr[i + 1], kCustomEscapeMap);
   }
   result += "]";
   return result;
@@ -170,6 +168,4 @@ TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarToJSON")
       return BNFGrammarJSONSerializer(grammar, prettify).ToString();
     });
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar

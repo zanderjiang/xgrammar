@@ -4,17 +4,12 @@
  * \brief The header for the parser of BNF/EBNF grammar into BNF AST.
  */
 
-#ifndef MLC_LLM_GRAMMAR_GRAMMAR_PARSER_H_
-#define MLC_LLM_GRAMMAR_GRAMMAR_PARSER_H_
+#ifndef XGRAMMAR_GRAMMAR_PARSER_H_
+#define XGRAMMAR_GRAMMAR_PARSER_H_
 
-#include <tvm/runtime/container/string.h>
-#include <tvm/runtime/logging.h>
+#include <xgrammar/grammar.h>
 
-#include "grammar.h"
-
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 using namespace tvm::runtime;
 
@@ -61,8 +56,6 @@ class BNFJSONParser {
   static BNFGrammar Parse(std::string json_string);
 };
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_GRAMMAR_PARSER_H_
+#endif  // XGRAMMAR_GRAMMAR_PARSER_H_

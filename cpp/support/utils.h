@@ -3,8 +3,12 @@
  * \file support/utils.h
  * \brief Utility functions.
  */
-#ifndef MLC_LLM_SUPPORT_UTILS_H_
-#define MLC_LLM_SUPPORT_UTILS_H_
+#ifndef XGRAMMAR_SUPPORT_UTILS_H_
+#define XGRAMMAR_SUPPORT_UTILS_H_
+
+#include <cstdint>
+
+namespace xgrammar {
 
 /*!
  * \brief Hash and combine value into seed.
@@ -24,5 +28,6 @@ uint32_t HashCombine(Args... args) {
   return seed;
 }
 
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_SUPPORT_UTILS_H_
+#endif  // XGRAMMAR_SUPPORT_UTILS_H_

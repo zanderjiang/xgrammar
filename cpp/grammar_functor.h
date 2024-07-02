@@ -4,19 +4,19 @@
  * \brief The header for the simplification of the BNF AST.
  */
 
-#ifndef MLC_LLM_GRAMMAR_GRAMMAR_FUNCTOR_H_
-#define MLC_LLM_GRAMMAR_GRAMMAR_FUNCTOR_H_
+#ifndef XGRAMMAR_GRAMMAR_FUNCTOR_H_
+#define XGRAMMAR_GRAMMAR_FUNCTOR_H_
+
+#include <xgrammar/grammar.h>
 
 #include <queue>
 #include <string>
 
-#include "grammar.h"
-#include "grammar_builder.h"
-#include "grammar_serializer.h"
+#include "./grammar_ast.h"
+#include "./grammar_builder.h"
+#include "./grammar_serializer.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 /*!
  * \brief Base class for visitors and mutators of the BNF grammar.
@@ -48,8 +48,7 @@ class BNFGrammarFunctor {
         VisitExpr(rule.body_expr_id);
         VisitLookaheadAssertion(rule.lookahead_assertion_id);
       }
-    } else if constexpr (std::is_same<T, int32_t>::value &&
-                         std::is_same<ReturnType, BNFGrammar>::value) {
+    } else if constexpr (std::is_same<T, int32_t>::value && std::is_same<ReturnType, BNFGrammar>::value) {
       // First add empty rules to ensure the new rule ids the same as the old ones, then update
       // the rule bodies
       for (int i = 0; i < static_cast<int>(grammar_->NumRules()); ++i) {
@@ -70,9 +69,9 @@ class BNFGrammarFunctor {
   }
 
  protected:
-  using Rule = BNFGrammarNode::Rule;
-  using RuleExpr = BNFGrammarNode::RuleExpr;
-  using RuleExprType = BNFGrammarNode::RuleExprType;
+  using Rule = BNFGrammar::Impl::Rule;
+  using RuleExpr = BNFGrammar::Impl::RuleExpr;
+  using RuleExprType = BNFGrammar::Impl::RuleExprType;
 
   /*! \brief Initialize the functor. Should be called at the beginning of Apply(). */
   virtual void Init(const BNFGrammar& grammar) {
@@ -111,7 +110,7 @@ class BNFGrammarFunctor {
       case RuleExprType::kRuleRef:
         return VisitRuleRef(rule_expr);
       default:
-        LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
+        XGRAMMAR_LOG(FATAL) << "Unexpected sequence type: " << static_cast<int>(rule_expr.type);
     }
   }
 
@@ -212,8 +211,6 @@ class BNFGrammarNormalizer : public BNFGrammarMutator {
   std::vector<std::unique_ptr<BNFGrammarMutator>> GetNormalizerList();
 };
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_GRAMMAR_FUNCTOR_H_
+#endif  // XGRAMMAR_GRAMMAR_FUNCTOR_H_

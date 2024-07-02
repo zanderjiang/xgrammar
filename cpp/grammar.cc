@@ -3,81 +3,84 @@
  * \file grammar/grammar.cc
  */
 
-#include "grammar.h"
+#include <xgrammar/grammar.h>
+#include <xgrammar/json_schema_converter.h>
 
-#include "grammar_functor.h"
-#include "grammar_parser.h"
-#include "grammar_serializer.h"
-#include "json_schema_converter.h"
+#include "./grammar_ast.h"
+#include "./grammar_functor.h"
+#include "./grammar_parser.h"
+#include "./grammar_serializer.h"
 
-namespace mlc {
-namespace llm {
-namespace serve {
-
-TVM_REGISTER_OBJECT_TYPE(BNFGrammarNode);
+namespace xgrammar {
 
 std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar) {
   os << BNFGrammarPrinter(grammar).ToString();
   return os;
 }
 
-BNFGrammar BNFGrammar::FromEBNFString(const std::string& ebnf_string,
-                                      const std::string& main_rule) {
+BNFGrammar BNFGrammar::FromEBNFString(
+    const std::string& ebnf_string, const std::string& main_rule
+) {
   auto grammar = EBNFParser::Parse(ebnf_string, main_rule);
   // Normalize the grammar by default
   grammar = BNFGrammarNormalizer().Apply(grammar);
   return grammar;
 }
 
-TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromEBNFString")
-    .set_body_typed([](String ebnf_string, String main_rule) {
-      return BNFGrammar::FromEBNFString(ebnf_string, main_rule);
-    });
+// TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromEBNFString")
+//     .set_body_typed([](String ebnf_string, String main_rule) {
+//       return BNFGrammar::FromEBNFString(ebnf_string, main_rule);
+//     });
 
 // Parse the EBNF string but not normalize it
-BNFGrammar DebugFromEBNFStringNoNormalize(const std::string& ebnf_string,
-                                          const std::string& main_rule) {
+BNFGrammar DebugFromEBNFStringNoNormalize(
+    const std::string& ebnf_string, const std::string& main_rule
+) {
   return EBNFParser::Parse(ebnf_string, main_rule);
 }
 
-TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarDebugFromEBNFStringNoNormalize")
-    .set_body_typed([](String ebnf_string, String main_rule) {
-      return DebugFromEBNFStringNoNormalize(ebnf_string, main_rule);
-    });
+// TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarDebugFromEBNFStringNoNormalize")
+//     .set_body_typed([](String ebnf_string, String main_rule) {
+//       return DebugFromEBNFStringNoNormalize(ebnf_string, main_rule);
+//     });
 
 BNFGrammar BNFGrammar::FromJSON(const std::string& json_string) {
   return BNFJSONParser::Parse(json_string);
 }
 
-TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromJSON").set_body_typed([](String json_string) {
-  return BNFGrammar::FromJSON(json_string);
-});
+// TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromJSON").set_body_typed([](String json_string) {
+//   return BNFGrammar::FromJSON(json_string);
+// });
 
-BNFGrammar BNFGrammar::FromSchema(const std::string& schema, std::optional<int> indent,
-                                  std::optional<std::pair<std::string, std::string>> separators,
-                                  bool strict_mode) {
+BNFGrammar BNFGrammar::FromSchema(
+    const std::string& schema,
+    std::optional<int> indent,
+    std::optional<std::pair<std::string, std::string>> separators,
+    bool strict_mode
+) {
   return FromEBNFString(JSONSchemaToEBNF(schema, indent, separators, strict_mode));
 }
 
-TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromSchema").set_body([](TVMArgs args, TVMRetValue* rv) {
-  std::optional<int> indent;
-  if (args[1].type_code() != kTVMNullptr) {
-    indent = args[1];
-  } else {
-    indent = std::nullopt;
-  }
+// TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromSchema").set_body([](TVMArgs args, TVMRetValue*
+// rv) {
+//   std::optional<int> indent;
+//   if (args[1].type_code() != kTVMNullptr) {
+//     indent = args[1];
+//   } else {
+//     indent = std::nullopt;
+//   }
 
-  std::optional<std::pair<std::string, std::string>> separators;
-  if (args[2].type_code() != kTVMNullptr) {
-    Array<String> separators_arr = args[2];
-    CHECK(separators_arr.size() == 2);
-    separators = std::make_pair(separators_arr[0], separators_arr[1]);
-  } else {
-    separators = std::nullopt;
-  }
+//   std::optional<std::pair<std::string, std::string>> separators;
+//   if (args[2].type_code() != kTVMNullptr) {
+//     Array<String> separators_arr = args[2];
+//     XGRAMMAR_CHECK(separators_arr.size() == 2);
+//     separators = std::make_pair(separators_arr[0], separators_arr[1]);
+//   } else {
+//     separators = std::nullopt;
+//   }
 
-  *rv = BNFGrammar::FromSchema(args[0], indent, separators, args[3]);
-});
+//   *rv = BNFGrammar::FromSchema(args[0], indent, separators, args[3]);
+// });
 
 // Optimized json grammar for the speed of the grammar state matcher
 const std::string kJSONGrammarString = R"(
@@ -166,10 +169,8 @@ BNFGrammar BNFGrammar::GetGrammarOfJSON() {
   return grammar;
 }
 
-TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarGetGrammarOfJSON").set_body_typed([]() {
-  return BNFGrammar::GetGrammarOfJSON();
-});
+// TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarGetGrammarOfJSON").set_body_typed([]() {
+//   return BNFGrammar::GetGrammarOfJSON();
+// });
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar

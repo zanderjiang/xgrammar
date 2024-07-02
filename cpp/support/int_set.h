@@ -3,19 +3,15 @@
  * \file grammar/support.h
  * \brief The header for utilities used in grammar-guided generation.
  */
-#ifndef MLC_LLM_GRAMMAR_SUPPORT_H_
-#define MLC_LLM_GRAMMAR_SUPPORT_H_
-
-#include <tvm/runtime/logging.h>
+#ifndef XGRAMMAR_SUPPORT_INT_SET_H_
+#define XGRAMMAR_SUPPORT_INT_SET_H_
 
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <vector>
 
-namespace mlc {
-namespace llm {
-namespace serve {
+namespace xgrammar {
 
 /*!
  * \brief Let lhs be the union of lhs and rhs. Suppose that both sets are sorted.
@@ -87,8 +83,6 @@ inline void IntsetIntersection(std::vector<int32_t>* lhs, const std::vector<int3
   lhs->erase(it_result, lhs->end());
 }
 
-}  // namespace serve
-}  // namespace llm
-}  // namespace mlc
+}  // namespace xgrammar
 
-#endif  // MLC_LLM_GRAMMAR_SUPPORT_H_
+#endif  // XGRAMMAR_SUPPORT_INT_SET_H_
