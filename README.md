@@ -1,4 +1,4 @@
-## GrammarLLM
+## XGrammar
 
 Cross-platform Near-zero Overhead Grammar-guided Generation for LLMs
 
