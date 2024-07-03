@@ -36,9 +36,9 @@ class BNFGrammarSerializer {
  */
 class BNFGrammarPrinter : public BNFGrammarSerializer {
  private:
-  using Rule = BNFGrammar::Implpl::Rule;
-  using RuleExprType = BNFGrammar::Implpl::RuleExprType;
-  using RuleExpr = BNFGrammar::Implpl::RuleExpr;
+  using Rule = BNFGrammar::Impl::Rule;
+  using RuleExprType = BNFGrammar::Impl::RuleExprType;
+  using RuleExpr = BNFGrammar::Impl::RuleExpr;
 
  public:
   /*!

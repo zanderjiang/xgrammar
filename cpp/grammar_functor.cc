@@ -5,7 +5,10 @@
 
 #include "grammar_functor.h"
 
+#include <xgrammar/grammar.h>
 #include <xgrammar/support/encoding.h>
+
+#include "grammar_ast.h"
 
 namespace xgrammar {
 
@@ -26,7 +29,7 @@ class SingleElementExprEliminator : public BNFGrammarMutator {
     if (lookahead_assertion_id == -1) {
       return -1;
     }
-    auto rule_expr = grammar_.->GetRuleExpr(lookahead_assertion_id);
+    auto rule_expr = grammar_->GetRuleExpr(lookahead_assertion_id);
     XGRAMMAR_CHECK(rule_expr.type == RuleExprType::kSequence);
 
     std::vector<int32_t> sequence_ids;
@@ -168,7 +171,7 @@ class NestedRuleUnwrapper : public BNFGrammarMutator {
     if (found_empty) {
       new_choice_ids.insert(new_choice_ids.begin(), builder_.AddEmptyStr());
     }
-    ICHECK_GE(new_choice_ids.size(), 1);
+    XGRAMMAR_ICHECK(new_choice_ids.size() >= 1);
     return new_choice_ids;
   }
 

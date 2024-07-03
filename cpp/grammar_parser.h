@@ -11,8 +11,6 @@
 
 namespace xgrammar {
 
-using namespace tvm::runtime;
-
 /*!
  * \brief This class parses a BNF/EBNF grammar string into an BNF abstract syntax tree (AST).
  * \details This function accepts the EBNF notation defined in the W3C XML Specification

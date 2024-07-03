@@ -10,14 +10,16 @@ namespace xgrammar {
 
 #define XGRAMMAR_DEFINE_PIMPL_METHODS(TypeName)                            \
  public:                                                                   \
+  class Impl;                                                              \
+  TypeName() = default;                                                    \
+  explicit TypeName(const std::shared_ptr<Impl>& pimpl) : pimpl_(pimpl) {} \
   TypeName(const TypeName& other) = default;                               \
   TypeName(TypeName&& other) noexcept = default;                           \
   TypeName& operator=(const TypeName& other) = default;                    \
   TypeName& operator=(TypeName&& other) noexcept = default;                \
+  Impl* operator->() { return pimpl_.get(); }                              \
                                                                            \
  private:                                                                  \
-  class Impl;                                                              \
-  explicit TypeName(const std::shared_ptr<Impl>& pimpl) : pimpl_(pimpl) {} \
   std::shared_ptr<Impl> pimpl_
 
 }  // namespace xgrammar

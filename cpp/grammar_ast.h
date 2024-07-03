@@ -157,7 +157,7 @@ class BNFGrammar::Impl {
 
   friend class BNFGrammarBuilder;
   friend class BNFGrammarJSONSerializer;
-  // friend class BNFJSONParser;
+  friend class BNFJSONParser;
 };
 
 }  // namespace xgrammar
