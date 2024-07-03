@@ -121,7 +121,7 @@ std::string BNFGrammarPrinter::PrintChoices(const RuleExpr& rule_expr) {
 
 std::string BNFGrammarPrinter::ToString() {
   std::string result;
-  auto num_rules = grammar_->NumRules();
+  int num_rules = grammar_->NumRules();
   for (auto i = 0; i < num_rules; ++i) {
     result += PrintRule(grammar_->GetRule(i)) + "\n";
   }

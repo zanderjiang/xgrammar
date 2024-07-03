@@ -746,7 +746,7 @@ std::string JSONSchemaToEBNFConverter::VisitArray(
   // 1. Handle prefix items
   if (schema.count("prefixItems")) {
     const auto& prefix_items = schema.at("prefixItems").get<picojson::array>();
-    for (int i = 0; i < prefix_items.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(prefix_items.size()); ++i) {
       XGRAMMAR_ICHECK(prefix_items[i].is<picojson::object>());
       result += " " + NextSeparator() + " ";
       result += CreateRuleFromSchema(prefix_items[i], rule_name + "_item_" + std::to_string(i));
@@ -875,7 +875,7 @@ std::string JSONSchemaToEBNFConverter::GetPartialRuleForPropertiesAllOptional(
   }
 
   // construct the main rule
-  for (int i = 0; i < properties.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(properties.size()); ++i) {
     if (i != 0) {
       res += " | ";
     }
@@ -898,13 +898,13 @@ std::string JSONSchemaToEBNFConverter::GetPartialRuleForPropertiesContainRequire
 ) {
   // Find the index of the first required property
   int first_required_idx = properties.size();
-  for (int i = 0; i < properties.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(properties.size()); ++i) {
     if (required.count(properties[i].first)) {
       first_required_idx = i;
       break;
     }
   }
-  XGRAMMAR_ICHECK(first_required_idx < properties.size());
+  XGRAMMAR_ICHECK(first_required_idx < static_cast<int>(properties.size()));
 
   std::string res = NextSeparator();
 
@@ -923,7 +923,7 @@ std::string JSONSchemaToEBNFConverter::GetPartialRuleForPropertiesContainRequire
   res += " " + property_pattern;
 
   // Handle the properties after the first required property
-  for (int i = first_required_idx + 1; i < properties.size(); ++i) {
+  for (int i = first_required_idx + 1; i < static_cast<int>(properties.size()); ++i) {
     const auto& [prop_name, prop_schema] = properties[i];
     XGRAMMAR_ICHECK(!prop_schema.is<bool>() || prop_schema.get<bool>());
     std::string property_pattern = GetPropertyPattern(prop_name, prop_schema, rule_name, i);

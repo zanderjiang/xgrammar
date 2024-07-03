@@ -34,7 +34,7 @@ std::string PrintAsUTF8(TCodepoint codepoint) {
   return utf8;
 }
 
-std::string PrintAsEscaped(
+std::string PrintAsEscapedUTF8(
     TCodepoint codepoint, const std::unordered_map<TCodepoint, std::string>& additional_escape_map
 ) {
   static const std::unordered_map<TCodepoint, std::string> kCodepointToEscape = {
@@ -73,13 +73,15 @@ std::string PrintAsEscaped(
   return std::string("\\") + prefix + hex;
 }
 
-std::string PrintAsEscaped(uint8_t raw_char) { return PrintAsEscaped(raw_char); }
+std::string PrintAsEscapedUTF8(uint8_t raw_char) {
+  return PrintAsEscapedUTF8(static_cast<TCodepoint>(raw_char));
+}
 
-std::string PrintAsEscaped(std::string raw_str) {
+std::string PrintAsEscapedUTF8(std::string raw_str) {
   std::string res;
   auto codepoints = ParseUTF8(raw_str.c_str(), UTF8ErrorPolicy::kReturnByte);
   for (auto c : codepoints) {
-    res += PrintAsEscaped(c);
+    res += PrintAsEscapedUTF8(c);
   }
   return res;
 }

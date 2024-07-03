@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(MSVC)
-    add_compile_options(/Wall)
+    add_compile_options(/Wall /WX)
 else()
-    add_compile_options(-Wall -Wextra)
+    add_compile_options(-Wall -Wextra -Werror -pedantic -Wno-unused-parameter)
 endif()
 
 

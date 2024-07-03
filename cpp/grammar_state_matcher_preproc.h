@@ -279,7 +279,7 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
 
     if (accepted) {
       // Accept the rest chars one by one
-      for (int j = prev_matched_size; j < token.size(); ++j) {
+      for (int j = prev_matched_size; j < static_cast<int>(token.size()); ++j) {
         if (!AcceptChar(token[j], false)) {
           accepted = false;
           break;
@@ -330,7 +330,7 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
     return ptr;
   }
 
-  for (int i = 0; i < token_table.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(token_table.size()); ++i) {
     const auto& token = token_table[i];
     // TODO(yixin): Now we detect stop tokens from the token string. We should be able to pass
     // the stop token set in.

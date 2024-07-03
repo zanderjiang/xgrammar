@@ -117,7 +117,7 @@ class BNFGrammar::Impl {
     /*! \brief The length of the data array. */
     int32_t data_len;
 
-    const int32_t size() const { return data_len; }
+    int32_t size() const { return data_len; }
     /*! \brief Get the i-th element of the data array. */
     const int32_t& operator[](int i) const {
       XGRAMMAR_DCHECK(i >= 0 && i < static_cast<int32_t>(data_len))

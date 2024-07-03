@@ -253,7 +253,7 @@ class StackTopsHistory {
   /*! \brief Roll back to several previous steps. Possibly frees node that do not exist in any stack
    * any more. */
   void Rollback(int rollback_steps) {
-    XGRAMMAR_DCHECK(rollback_steps < stack_tops_history_.size())
+    XGRAMMAR_DCHECK(rollback_steps < static_cast<int>(stack_tops_history_.size()))
         << "The number of requested rollback steps is greater than or equal to the current "
            "history "
         << "size: " << rollback_steps << " vs " << stack_tops_history_.size() << ".";
@@ -265,7 +265,7 @@ class StackTopsHistory {
   /*! \brief Discard the earliest several steps. Possibly frees node that do not exist in any stack
    * any more. */
   void DiscardEarliest(int discard_steps) {
-    XGRAMMAR_DCHECK(discard_steps < stack_tops_history_.size())
+    XGRAMMAR_DCHECK(discard_steps < static_cast<int>(stack_tops_history_.size()))
         << "The number of requested discard steps is greater than or equal to the current "
            "history "
         << "size: " << discard_steps << " vs " << stack_tops_history_.size() << ".";

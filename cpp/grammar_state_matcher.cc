@@ -203,7 +203,7 @@ bool GrammarStateMatcher::Impl::AcceptToken(int32_t token_id, bool verbose) {
        "accept another token id "
     << token_id;
 
-  XGRAMMAR_CHECK(token_id >= 0 && token_id < init_ctx_->vocab_size)
+  XGRAMMAR_CHECK(token_id >= 0 && token_id < static_cast<int>(init_ctx_->vocab_size))
       << "Invalid token id " << token_id << " for GrammarStateMatcher";
 
   if (verbose) {
@@ -243,7 +243,7 @@ bool GrammarStateMatcher::Impl::AcceptToken(int32_t token_id, bool verbose) {
     ++pos;
   }
   token_length_history.push_back(token.size());
-  if (token_length_history.size() > max_rollback_steps_) {
+  if (static_cast<int>(token_length_history.size()) > max_rollback_steps_) {
     DiscardEarliestChars(token_length_history.front());
     token_length_history.pop_front();
   }
@@ -270,8 +270,6 @@ void GrammarStateMatcher::Impl::FindNextTokenBitmask(DLTensor* next_token_bitmas
   tmp_accepted_bitset_.Reset();
   // {-1} means the universal set, i.e. all tokens initially
   tmp_rejected_indices_.assign({-1});
-
-  int check_cnt = 0;
 
   for (auto top : latest_stack_tops) {
     auto cur_rule_position = tree_[top];
@@ -320,8 +318,7 @@ void GrammarStateMatcher::Impl::FindNextTokenBitmask(DLTensor* next_token_bitmas
 
       // Step 2.2. Find if the current token is accepted or rejected.
       if (accepted) {
-        for (int j = prev_matched_size; j < cur_token.size(); ++j) {
-          ++check_cnt;
+        for (int j = prev_matched_size; j < static_cast<int>(cur_token.size()); ++j) {
           if (!AcceptChar(cur_token[j], false)) {
             accepted = false;
             break;
@@ -450,7 +447,7 @@ std::string GrammarStateMatcher::Impl::FindJumpForwardString() {
 }
 
 void GrammarStateMatcher::Impl::Rollback(int num_tokens) {
-  XGRAMMAR_CHECK(num_tokens <= token_length_history.size())
+  XGRAMMAR_CHECK(num_tokens <= static_cast<int>(token_length_history.size()))
       << "Intended to rollback " << num_tokens << " tokens, but only the last "
       << token_length_history.size() << " steps of history are saved";
   while (num_tokens > 0) {
@@ -527,17 +524,17 @@ int GrammarStateMatcher::Impl::GetNextUncertainToken(
 ) {
   if (is_uncertain_saved) {
     ++*iterator_uncertain;
-    if (*iterator_uncertain == uncertain_indices.size()) {
+    if (*iterator_uncertain == static_cast<int>(uncertain_indices.size())) {
       return -1;
     }
     return uncertain_indices[*iterator_uncertain];
   } else {
     ++*iterator_uncertain;
-    while (*iterator_uncertain < uncertain_tokens_bitset.size() &&
+    while (*iterator_uncertain < static_cast<int>(uncertain_tokens_bitset.size()) &&
            !uncertain_tokens_bitset[*iterator_uncertain]) {
       ++*iterator_uncertain;
     }
-    if (*iterator_uncertain == uncertain_tokens_bitset.size()) {
+    if (*iterator_uncertain == static_cast<int>(uncertain_tokens_bitset.size())) {
       return -1;
     }
     return *iterator_uncertain;
@@ -548,7 +545,6 @@ GrammarStateMatcher::GrammarStateMatcher(
     std::shared_ptr<GrammarStateInitContext> init_ctx, int max_rollback_steps
 )
     : pimpl_(std::make_shared<GrammarStateMatcher::Impl>(init_ctx, max_rollback_steps)) {}
-
 
 bool GrammarStateMatcher::AcceptToken(int32_t token_id, bool verbose) {
   return pimpl_->AcceptToken(token_id, verbose);
@@ -567,7 +563,6 @@ int GrammarStateMatcher::MaxRollbackSteps() const { return pimpl_->MaxRollbackSt
 bool GrammarStateMatcher::IsTerminated() const { return pimpl_->IsTerminated(); }
 
 void GrammarStateMatcher::ResetState() { pimpl_->ResetState(); }
-
 
 // #ifndef COMPILE_MLC_WASM_RUNTIME
 // // This creates tokenizer dependency issue in WASM building for web, hence skipped

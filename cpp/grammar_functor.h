@@ -68,6 +68,9 @@ class BNFGrammarFunctor {
     }
   }
 
+  /*! \brief Virtual destructor. */
+  virtual ~BNFGrammarFunctor() = default;
+
  protected:
   using Rule = BNFGrammar::Impl::Rule;
   using RuleExpr = BNFGrammar::Impl::RuleExpr;
