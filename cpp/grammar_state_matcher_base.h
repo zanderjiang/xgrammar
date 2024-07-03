@@ -8,13 +8,13 @@
 
 #include <xgrammar/grammar.h>
 
+#include <algorithm>
 #include <vector>
 
+#include "grammar_ast.h"
 #include "grammar_state_matcher_state.h"
 
 namespace xgrammar {
-
-using namespace tvm::runtime;
 
 /*! \brief The base class of GrammarStateMatcher. It implements a character-based matching
  * automata, and supports accepting a character, rolling back by character, etc.

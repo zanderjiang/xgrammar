@@ -462,30 +462,4 @@ BNFGrammar EBNFParser::Parse(std::string ebnf_string, std::string main_rule) {
   return parser.DoParse(ebnf_string, main_rule);
 }
 
-// BNFGrammar BNFJSONParser::Parse(std::string json_string) {
-//   auto node = std::make_shared<BNFGrammar::Impl>();
-//   picojson::value grammar_json_value;
-//   std::string err = picojson::parse(grammar_json_value, schema);
-
-//   auto grammar_json = json::ParseToJSONObject(json_string);
-//   auto rules_json = json::Lookup<picojson::array>(grammar_json, "rules");
-//   for (const auto& rule_json : rules_json) {
-//     auto rule_json_obj = rule_json.get<picojson::object>();
-//     auto name = json::Lookup<std::string>(rule_json.get<picojson::object>(), "name");
-//     auto rule_expr = static_cast<int32_t>(
-//         json::Lookup<int64_t>(rule_json.get<picojson::object>(), "body_expr_id")
-//     );
-//     node->rules_.push_back(BNFGrammar::Impl::Rule({name, rule_expr}));
-//   }
-//   auto rule_expr_data_json = json::Lookup<picojson::array>(grammar_json, "rule_expr_data");
-//   for (const auto& data_json : rule_expr_data_json) {
-//     node->rule_expr_data_.push_back(static_cast<int32_t>(data_json.get<int64_t>()));
-//   }
-//   auto rule_expr_indptr_json = json::Lookup<picojson::array>(grammar_json, "rule_expr_indptr");
-//   for (const auto& index_ptr_json : rule_expr_indptr_json) {
-//     node->rule_expr_indptr_.push_back(static_cast<int32_t>(index_ptr_json.get<int64_t>()));
-//   }
-//   return BNFGrammar(std::move(node));
-// }
-
 }  // namespace xgrammar

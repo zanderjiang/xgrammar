@@ -2,15 +2,15 @@
  *  Copyright (c) 2023 by Contributors
  * \file support/encoding.cc
  */
-#include <support/encoding.h>
-#include <support/logging.h>
+#include <xgrammar/support/encoding.h>
+#include <xgrammar/support/logging.h>
 
 #include <array>
 
 namespace xgrammar {
 
 std::string PrintAsUTF8(TCodepoint codepoint) {
-  XGRAMMAR_DCHECK(codepoint <= 0x10FFFF) << "Invalid codepoint: " << codepoint;
+  XGRAMMAR_ICHECK(codepoint <= 0x10FFFF) << "Invalid codepoint: " << codepoint;
   std::string utf8;
   if (codepoint <= 0x7F) {
     // 1-byte sequence

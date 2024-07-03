@@ -9,13 +9,13 @@
 #include <xgrammar/grammar.h>
 
 #include <queue>
+#include <unordered_set>
 #include <vector>
 
+#include "grammar_ast.h"
 #include "grammar_serializer.h"
 
 namespace xgrammar {
-
-using namespace tvm::runtime;
 
 /*! \brief Specifies a position in a rule. */
 struct RulePosition {

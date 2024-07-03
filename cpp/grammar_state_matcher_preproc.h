@@ -7,17 +7,17 @@
 #define XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
 
 #include <xgrammar/grammar.h>
+#include <xgrammar/support/encoding.h>
 
+#include <unordered_set>
 #include <vector>
 
-#include "../support/dynamic_bitset.h"
-#include "../support/encoding.h"
-#include "../support/utils.h"
+#include "grammar_ast.h"
 #include "grammar_state_matcher_base.h"
+#include "support/dynamic_bitset.h"
+#include "support/utils.h"
 
 namespace xgrammar {
-
-using namespace tvm::runtime;
 
 /*!
  * \brief Preprocessed information, for a given specific RulePosition, divides the token set
@@ -405,16 +405,15 @@ inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitC
   return ptr;
 }
 
-class GrammarInitContextCacheImpl : public GrammarInitContextCacheNode {
+class GrammarInitContextCache::Impl {
  public:
-  GrammarInitContextCacheImpl(const std::vector<std::string>& token_table);
+  Impl(const std::vector<std::string>& token_table);
 
-  std::shared_ptr<GrammarStateInitContext> GetInitContextForJSONSchema(const std::string& schema
-  ) final;
+  std::shared_ptr<GrammarStateInitContext> GetInitContextForJSONSchema(const std::string& schema);
 
-  std::shared_ptr<GrammarStateInitContext> GetInitContextForJSON() final;
+  std::shared_ptr<GrammarStateInitContext> GetInitContextForJSON();
 
-  void Clear() final;
+  void Clear();
 
  private:
   /*! \brief The token table associated with this storage class. */
@@ -426,16 +425,14 @@ class GrammarInitContextCacheImpl : public GrammarInitContextCacheNode {
   std::shared_ptr<GrammarStateInitContext> init_ctx_for_json_;
 };
 
-inline GrammarInitContextCacheImpl::GrammarInitContextCacheImpl(
-    const std::vector<std::string>& token_table
-)
+inline GrammarInitContextCache::Impl::Impl(const std::vector<std::string>& token_table)
     : token_table_(token_table) {
   init_ctx_for_json_ =
       GrammarStateMatcher::CreateInitContext(BNFGrammar::GetGrammarOfJSON(), token_table_);
 }
 
 inline std::shared_ptr<GrammarStateInitContext>
-GrammarInitContextCacheImpl::GetInitContextForJSONSchema(const std::string& schema) {
+GrammarInitContextCache::Impl::GetInitContextForJSONSchema(const std::string& schema) {
   auto it = init_ctx_for_schema_cache_.find(schema);
   if (it != init_ctx_for_schema_cache_.end()) {
     return it->second;
@@ -446,15 +443,27 @@ GrammarInitContextCacheImpl::GetInitContextForJSONSchema(const std::string& sche
   return init_ctx;
 }
 
-inline std::shared_ptr<GrammarStateInitContext> GrammarInitContextCacheImpl::GetInitContextForJSON(
-) {
+inline std::shared_ptr<GrammarStateInitContext>
+GrammarInitContextCache::Impl::GetInitContextForJSON() {
   return init_ctx_for_json_;
 }
 
-inline void GrammarInitContextCacheImpl::Clear() { init_ctx_for_schema_cache_.clear(); }
+inline void GrammarInitContextCache::Impl::Clear() { init_ctx_for_schema_cache_.clear(); }
 
-GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>& token_table)
-    : ObjectRef(make_object<GrammarInitContextCacheImpl>(token_table)) {}
+// pImpl idioms: function forwarding
+inline GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>& token_table)
+    : pimpl_(std::make_shared<Impl>(token_table)) {}
+
+inline std::shared_ptr<GrammarStateInitContext> GrammarInitContextCache::GetInitContextForJSON() {
+  return pimpl_->GetInitContextForJSON();
+}
+
+inline std::shared_ptr<GrammarStateInitContext>
+GrammarInitContextCache::GetInitContextForJSONSchema(const std::string& schema) {
+  return pimpl_->GetInitContextForJSONSchema(schema);
+}
+
+inline void GrammarInitContextCache::Clear() { pimpl_->Clear(); }
 
 }  // namespace xgrammar
 

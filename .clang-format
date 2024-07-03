@@ -1,6 +1,6 @@
 BasedOnStyle: Google
 DerivePointerAlignment: false
-ColumnLimit:     100
+ColumnLimit: 100
 PointerAlignment: Left
 AlignAfterOpenBracket: BlockIndent
 BinPackArguments: false

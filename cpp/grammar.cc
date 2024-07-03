@@ -44,14 +44,6 @@ BNFGrammar DebugFromEBNFStringNoNormalize(
 //       return DebugFromEBNFStringNoNormalize(ebnf_string, main_rule);
 //     });
 
-BNFGrammar BNFGrammar::FromJSON(const std::string& json_string) {
-  return BNFJSONParser::Parse(json_string);
-}
-
-// TVM_REGISTER_GLOBAL("mlc.grammar.BNFGrammarFromJSON").set_body_typed([](String json_string) {
-//   return BNFGrammar::FromJSON(json_string);
-// });
-
 BNFGrammar BNFGrammar::FromSchema(
     const std::string& schema,
     std::optional<int> indent,
