@@ -32,9 +32,9 @@ set(XGRAMMAR_INCLUDE
 target_include_directories(xgrammar_interface INTERFACE ${XGRAMMAR_INCLUDE})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-target_compile_definitions(xgrammar_interface INTERFACE XGRAMMAR_ENABLE_LOG_DEBUG=1)
+    target_compile_definitions(xgrammar_interface INTERFACE XGRAMMAR_ENABLE_LOG_DEBUG=1)
 else()
-target_compile_definitions(xgrammar_interface INTERFACE XGRAMMAR_ENABLE_LOG_DEBUG=0)
+    target_compile_definitions(xgrammar_interface INTERFACE XGRAMMAR_ENABLE_LOG_DEBUG=0)
 endif()
 
 # Source files list
