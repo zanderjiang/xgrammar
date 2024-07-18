@@ -316,7 +316,7 @@ inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens
   );
 }
 
-inline std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitContext(
+std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitContext(
     const BNFGrammar& grammar, const std::vector<std::string>& token_table
 ) {
   using RuleExprType = BNFGrammar::Impl::RuleExprType;
@@ -451,19 +451,19 @@ GrammarInitContextCache::Impl::GetInitContextForJSON() {
 inline void GrammarInitContextCache::Impl::Clear() { init_ctx_for_schema_cache_.clear(); }
 
 // pImpl idioms: function forwarding
-inline GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>& token_table)
+GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>& token_table)
     : pimpl_(std::make_shared<Impl>(token_table)) {}
 
-inline std::shared_ptr<GrammarStateInitContext> GrammarInitContextCache::GetInitContextForJSON() {
+std::shared_ptr<GrammarStateInitContext> GrammarInitContextCache::GetInitContextForJSON() {
   return pimpl_->GetInitContextForJSON();
 }
 
-inline std::shared_ptr<GrammarStateInitContext>
+std::shared_ptr<GrammarStateInitContext>
 GrammarInitContextCache::GetInitContextForJSONSchema(const std::string& schema) {
   return pimpl_->GetInitContextForJSONSchema(schema);
 }
 
-inline void GrammarInitContextCache::Clear() { pimpl_->Clear(); }
+void GrammarInitContextCache::Clear() { pimpl_->Clear(); }
 
 }  // namespace xgrammar
 
