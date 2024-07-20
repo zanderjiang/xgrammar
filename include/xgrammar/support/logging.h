@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file support/logging.h
+ * \file xgrammar/support/logging.h
  * \brief A logging library that supports logging at different levels.
  */
 #ifndef XGRAMMAR_SUPPORT_LOGGING_H_

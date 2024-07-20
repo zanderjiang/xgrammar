@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_state_matcher.h
+ * \file xgrammar/grammar_state_matcher.h
  * \brief The header for the support of matching tokens to BNF grammar. This is the core
  * logic of the grammar-guided generation.
  */

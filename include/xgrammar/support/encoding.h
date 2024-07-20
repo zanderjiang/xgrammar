@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file support/encoding.h
+ * \file xgrammar/support/encoding.h
  * \brief Encoding and decoding from/to UTF-8 and escape sequence to/from codepoints.
  */
 #ifndef XGRAMMAR_SUPPORT_ENCODING_H_

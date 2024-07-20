@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_state_matcher_preproc.h
+ * \file xgrammar/grammar_state_matcher_preproc.h
  * \brief The header for the preprocessing of the grammar state matcher.
  */
 #ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_

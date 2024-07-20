@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar.cc
+ * \file xgrammar/grammar.cc
  */
 
 #include <xgrammar/grammar.h>

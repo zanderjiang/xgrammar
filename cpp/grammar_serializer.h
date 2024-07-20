@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_serializer.h
+ * \file xgrammar/grammar_serializer.h
  * \brief The header for printing the AST of a BNF grammar.
  */
 

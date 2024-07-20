@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_state_matcher_base.h
+ * \file xgrammar/grammar_state_matcher_base.h
  * \brief The base class of GrammarStateMatcher. It implements a character-based matching automata.
  */
 #ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_BASE_H_

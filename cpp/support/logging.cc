@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file support/encoding.cc
+ * \file xgrammar/support/logging.cc
  */
 #include <xgrammar/support/logging.h>
 

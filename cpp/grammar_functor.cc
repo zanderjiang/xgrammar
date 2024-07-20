@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_functor.cc
+ * \file xgrammar/grammar_functor.cc
  */
 
 #include "grammar_functor.h"

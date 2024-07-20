@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2024 by Contributors
- * \file grammar/support.h
+ * \file xgrammar/support/int_set.h
  * \brief The header for utilities used in grammar-guided generation.
  */
 #ifndef XGRAMMAR_SUPPORT_INT_SET_H_

@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_builder.h
+ * \file xgrammar/grammar_builder.h
  * \brief The header for the building the BNF AST.
  */
 

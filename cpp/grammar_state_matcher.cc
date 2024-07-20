@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_state_matcher.cc
+ * \file xgrammar/grammar_state_matcher.cc
  */
 // #define XGRAMMAR_ENABLE_LOG_DEBUG 1
 #include <xgrammar/grammar.h>

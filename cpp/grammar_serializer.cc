@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_serializer.cc
+ * \file xgrammar/grammar_serializer.cc
  */
 
 #include "grammar_serializer.h"

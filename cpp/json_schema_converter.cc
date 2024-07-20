@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/json_schema_converter.cc
+ * \file xgrammar/json_schema_converter.cc
  */
 #include <picojson.h>
 #include <xgrammar/support/logging.h>

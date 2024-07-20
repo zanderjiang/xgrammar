@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2024 by Contributors
- * \file support/utils.h
+ * \file xgrammar/support/utils.h
  * \brief Utility functions.
  */
 #ifndef XGRAMMAR_SUPPORT_UTILS_H_

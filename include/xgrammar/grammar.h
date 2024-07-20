@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar.h
+ * \file xgrammar/grammar.h
  * \brief The header for the support of grammar-guided generation.
  */
 

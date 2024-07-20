@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_functor.h
+ * \file xgrammar/grammar_functor.h
  * \brief The header for the simplification of the BNF AST.
  */
 

@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_parser.h
+ * \file xgrammar/grammar_parser.h
  * \brief The header for the parser of BNF/EBNF grammar into BNF AST.
  */
 

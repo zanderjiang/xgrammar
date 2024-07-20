@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_state_matcher_state.h
+ * \file xgrammar/grammar_state_matcher_state.h
  * \brief The header for the definition of the state used in the grammar state matcher.
  */
 #ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_

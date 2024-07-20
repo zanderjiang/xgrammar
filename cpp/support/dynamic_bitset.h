@@ -1,6 +1,6 @@
 /*!
  * Copyright (c) 2024 by Contributors
- * \file support/dynamic_bitset.h
+ * \file xgrammar/support/dynamic_bitset.h
  * \brief The header for utilities used in grammar-guided generation.
  */
 #ifndef XGRAMMAR_SUPPORT_DYNAMIC_BITSET_H_

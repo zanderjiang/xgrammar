@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file support/object.h
+ * \file xgrammar/support/object.h
  * \brief Utilities for creating objects.
  */
 #ifndef XGRAMMAR_SUPPORT_OBJECT_H_

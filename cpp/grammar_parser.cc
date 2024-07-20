@@ -1,6 +1,6 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file grammar/grammar_parser.cc
+ * \file xgrammar/grammar_parser.cc
  */
 
 #include "grammar_parser.h"
