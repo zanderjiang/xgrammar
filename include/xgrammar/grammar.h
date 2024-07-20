@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2023 by Contributors
+ *  Copyright (c) 2024 by Contributors
  * \file grammar/grammar.h
  * \brief The header for the support of grammar-guided generation.
  */

@@ -1,7 +1,7 @@
 /*!
- *  Copyright (c) 2023 by Contributors
- * \file support/encoding.h
- * \brief Encoding and decoding from/to UTF-8 and escape sequence to/from codepoints.
+ *  Copyright (c) 2024 by Contributors
+ * \file support/logging.h
+ * \brief A logging library that supports logging at different levels.
  */
 #ifndef XGRAMMAR_SUPPORT_LOGGING_H_
 #define XGRAMMAR_SUPPORT_LOGGING_H_

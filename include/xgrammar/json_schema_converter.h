@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2023 by Contributors
+ *  Copyright (c) 2024 by Contributors
  * \file grammar/json_grammar_converter.h
  * \brief The header for translating JSON schema to EBNF grammar.
  */

@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2023 by Contributors
+ *  Copyright (c) 2024 by Contributors
  * \file support/encoding.h
  * \brief Encoding and decoding from/to UTF-8 and escape sequence to/from codepoints.
  */
@@ -39,7 +39,8 @@ std::string PrintAsUTF8(TCodepoint codepoint);
  */
 std::string PrintAsEscapedUTF8(
     TCodepoint codepoint,
-    const std::unordered_map<TCodepoint, std::string>& additional_escape_map = {});
+    const std::unordered_map<TCodepoint, std::string>& additional_escape_map = {}
+);
 
 /*!
  * \brief Print the given char to a escaped string that can be printed.
@@ -81,7 +82,8 @@ enum class UTF8ErrorPolicy {
  * kReturnInvalid, the function returns (CharHandlingError::kInvalidUTF8, input char pointer).
  */
 std::pair<TCodepoint, const char*> ParseNextUTF8(
-    const char* utf8, UTF8ErrorPolicy error_policy = UTF8ErrorPolicy::kReturnInvalid);
+    const char* utf8, UTF8ErrorPolicy error_policy = UTF8ErrorPolicy::kReturnInvalid
+);
 
 /*!
  * \brief Parse all codepoints in a UTF-8 string.
@@ -89,8 +91,9 @@ std::pair<TCodepoint, const char*> ParseNextUTF8(
  * \return All codepoints. If the UTF-8 string is invalid, and the error policy is
  * kReturnInvalid, the function returns {CharHandlingError::kInvalidUTF8}.
  */
-std::vector<TCodepoint> ParseUTF8(const char* utf8,
-                                  UTF8ErrorPolicy error_policy = UTF8ErrorPolicy::kReturnInvalid);
+std::vector<TCodepoint> ParseUTF8(
+    const char* utf8, UTF8ErrorPolicy error_policy = UTF8ErrorPolicy::kReturnInvalid
+);
 
 /*!
  * \brief Parse the first codepoint from a UTF-8 string. Also checks escape sequences and converts
@@ -103,8 +106,8 @@ std::vector<TCodepoint> ParseUTF8(const char* utf8,
  * (CharHandlingError::kInvalidUTF8, input char pointer).
  */
 std::pair<TCodepoint, const char*> ParseNextUTF8OrEscaped(
-    const char* utf8,
-    const std::unordered_map<std::string, TCodepoint>& additional_escape_map = {});
+    const char* utf8, const std::unordered_map<std::string, TCodepoint>& additional_escape_map = {}
+);
 
 }  // namespace xgrammar
 

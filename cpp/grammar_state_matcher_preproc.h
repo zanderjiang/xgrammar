@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2023 by Contributors
+ *  Copyright (c) 2024 by Contributors
  * \file grammar/grammar_state_matcher_preproc.h
  * \brief The header for the preprocessing of the grammar state matcher.
  */
@@ -458,8 +458,9 @@ std::shared_ptr<GrammarStateInitContext> GrammarInitContextCache::GetInitContext
   return pimpl_->GetInitContextForJSON();
 }
 
-std::shared_ptr<GrammarStateInitContext>
-GrammarInitContextCache::GetInitContextForJSONSchema(const std::string& schema) {
+std::shared_ptr<GrammarStateInitContext> GrammarInitContextCache::GetInitContextForJSONSchema(
+    const std::string& schema
+) {
   return pimpl_->GetInitContextForJSONSchema(schema);
 }
 

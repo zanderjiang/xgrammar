@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2023 by Contributors
+ *  Copyright (c) 2024 by Contributors
  * \file grammar/grammar_state_matcher_base.h
  * \brief The base class of GrammarStateMatcher. It implements a character-based matching automata.
  */

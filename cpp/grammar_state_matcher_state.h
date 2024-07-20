@@ -1,5 +1,5 @@
 /*!
- *  Copyright (c) 2023 by Contributors
+ *  Copyright (c) 2024 by Contributors
  * \file grammar/grammar_state_matcher_state.h
  * \brief The header for the definition of the state used in the grammar state matcher.
  */
