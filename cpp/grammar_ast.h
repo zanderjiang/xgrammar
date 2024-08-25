@@ -7,8 +7,7 @@
 #ifndef XGRAMMAR_GRAMMAR_AST_H_
 #define XGRAMMAR_GRAMMAR_AST_H_
 
-#include <xgrammar/grammar.h>
-#include <xgrammar/support/object.h>
+#include <xgrammar/xgrammar.h>
 
 #include <string>
 #include <vector>

@@ -6,8 +6,8 @@
 #ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
 #define XGRAMMAR_GRAMMAR_STATE_MATCHER_PREPROC_H_
 
-#include <xgrammar/grammar.h>
 #include <xgrammar/support/encoding.h>
+#include <xgrammar/xgrammar.h>
 
 #include <unordered_set>
 #include <vector>
@@ -56,7 +56,7 @@ struct CatagorizedTokens {
   CatagorizedTokens() = default;
 
   CatagorizedTokens(
-      int vocab_size,
+      size_t vocab_size,
       const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
       const std::vector<int32_t>& accepted_indices,
       const std::vector<int32_t>& rejected_indices,
@@ -80,9 +80,9 @@ class GrammarStateInitContext {
   /*! \brief All (id, token) pairs sorted in lexicographic order. This sorting is done to
    * maximize prefix reuse during matching. Special tokens and stop tokens are not included. */
   std::vector<std::pair<int32_t, std::string>> sorted_token_table;
-  /*! \brief The stop tokens. When the GrammarStateMatcher can reach the end of the= grammar,
+  /*! \brief The stop tokens. When the GrammarStateMatcher can reach the end of the grammar,
    * stop tokens can be accepted. */
-  std::vector<int32_t> stop_token_ids;
+  std::vector<int32_t> detected_stop_token_ids;
   /*! \brief The special tokens. These tokens are ignored (masked out) during the grammar-guided
    * generation. */
   std::unordered_set<int32_t> special_token_ids;
@@ -133,7 +133,7 @@ class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
    * no uncertain tokens. Useful for the main rule.
    */
   CatagorizedTokens GetCatagorizedTokens(
-      int vocab_size,
+      size_t vocab_size,
       const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
       bool consider_parent_rule
   );
@@ -159,7 +159,7 @@ class GrammarStateMatcherForInitContext : public GrammarStateMatcherBase {
 };
 
 inline CatagorizedTokens::CatagorizedTokens(
-    int vocab_size,
+    size_t vocab_size,
     const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
     const std::vector<int32_t>& accepted_indices,
     const std::vector<int32_t>& rejected_indices,
@@ -232,7 +232,7 @@ bool GrammarStateMatcherForInitContext::IsTokenPassLookaheadAssertion(
 }
 
 inline CatagorizedTokens GrammarStateMatcherForInitContext::GetCatagorizedTokens(
-    int vocab_size,
+    size_t vocab_size,
     const std::vector<std::pair<int32_t, std::string>>& sorted_token_table,
     bool consider_parent_rule
 ) {
@@ -340,7 +340,7 @@ std::shared_ptr<GrammarStateInitContext> GrammarStateMatcher::CreateInitContext(
     // Gemma: <eos>, <end_of_turn>
     if (token == "</s>" || token == "<|end_of_text|>" || token == "<|eot_id|>" ||
         token == "<|endoftext|>" || token == "<eos>" || token == "<end_of_turn>") {
-      ptr->stop_token_ids.push_back(i);
+      ptr->detected_stop_token_ids.push_back(i);
     } else if ((token[0] == '<' && token.back() == '>' && token.size() >= 3) || token == "[@BOS@]") {
       // gemma treats [@BOS@] as a special token
       ptr->special_token_ids.insert(i);
@@ -427,8 +427,7 @@ class GrammarInitContextCache::Impl {
 
 inline GrammarInitContextCache::Impl::Impl(const std::vector<std::string>& token_table)
     : token_table_(token_table) {
-  init_ctx_for_json_ =
-      GrammarStateMatcher::CreateInitContext(BNFGrammar::GetGrammarOfJSON(), token_table_);
+  init_ctx_for_json_ = GrammarStateMatcher::CreateInitContext(BuiltinGrammar::JSON(), token_table_);
 }
 
 inline std::shared_ptr<GrammarStateInitContext>
@@ -438,7 +437,7 @@ GrammarInitContextCache::Impl::GetInitContextForJSONSchema(const std::string& sc
     return it->second;
   }
   auto init_ctx =
-      GrammarStateMatcher::CreateInitContext(BNFGrammar::FromSchema(schema), token_table_);
+      GrammarStateMatcher::CreateInitContext(BuiltinGrammar::JSONSchema(schema), token_table_);
   init_ctx_for_schema_cache_[schema] = init_ctx;
   return init_ctx;
 }
@@ -450,7 +449,6 @@ GrammarInitContextCache::Impl::GetInitContextForJSON() {
 
 inline void GrammarInitContextCache::Impl::Clear() { init_ctx_for_schema_cache_.clear(); }
 
-// pImpl idioms: function forwarding
 GrammarInitContextCache::GrammarInitContextCache(const std::vector<std::string>& token_table)
     : pimpl_(std::make_shared<Impl>(token_table)) {}
 

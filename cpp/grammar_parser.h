@@ -7,7 +7,7 @@
 #ifndef XGRAMMAR_GRAMMAR_PARSER_H_
 #define XGRAMMAR_GRAMMAR_PARSER_H_
 
-#include <xgrammar/grammar.h>
+#include <xgrammar/xgrammar.h>
 
 #include "support/logging.h"
 
@@ -41,6 +41,19 @@ class EBNFParser {
    public:
     ParseError(const std::string& msg) : Error(msg) {}
   };
+};
+
+/*!
+ * \brief Parse a BNF grammar from the raw representation of the AST in JSON format.
+ */
+class BNFJSONParser {
+ public:
+  /*!
+   * \brief Parse the JSON string
+   * \param json_string The JSON string.
+   * \return The parsed BNF grammar.
+   */
+  static BNFGrammar Parse(std::string json_string);
 };
 
 }  // namespace xgrammar

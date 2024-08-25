@@ -11,9 +11,11 @@
 #include <dlpack/dlpack.h>
 #include <xgrammar/support/object.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace xgrammar {
@@ -71,16 +73,31 @@ class BNFGrammar {
    * \param ebnf_string The EBNF-formatted string.
    * \param main_rule The name of the main rule.
    */
-  static BNFGrammar FromEBNFString(
-      const std::string& ebnf_string, const std::string& main_rule = "main"
-  );
+  BNFGrammar(const std::string& ebnf_string, const std::string& main_rule = "main");
+
+  std::string ToString() const;
+
+  /*! \brief Print a BNF grammar. */
+  friend std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar);
+
+  std::string Serialize(bool prettify = false) const;
 
   /*!
    * \brief Construct a BNF grammar from the dumped JSON string.
    * \param json_string The JSON-formatted string. This string should have the same format as
    * the result of BNFGrammarJSONSerializer::ToString.
    */
-  static BNFGrammar FromJSON(const std::string& json_string);
+  static BNFGrammar Deserialize(const std::string& json_string);
+
+  XGRAMMAR_DEFINE_PIMPL_METHODS(BNFGrammar);
+};
+
+class BuiltinGrammar {
+ public:
+  /*!
+   * \brief Get the grammar of standard JSON format. We have built-in support for JSON.
+   */
+  static BNFGrammar JSON();
 
   /*!
    * \brief Construct a BNF grammar from the json schema string. The schema string should be in the
@@ -99,7 +116,7 @@ class BNFGrammar {
    * This helps LLM to generate accurate output in the grammar-guided generation with JSON
    * schema. Default: true.
    */
-  static BNFGrammar FromSchema(
+  static BNFGrammar JSONSchema(
       const std::string& schema,
       std::optional<int> indent = std::nullopt,
       std::optional<std::pair<std::string, std::string>> separators = std::nullopt,
@@ -107,16 +124,38 @@ class BNFGrammar {
   );
 
   /*!
-   * \brief Get the grammar of standard JSON format. We have built-in support for JSON.
+   * \brief Convert JSON schema string to EBNF grammar string.
+   * \param json_schema The JSON schema string.
+   * \param indent The number of spaces for indentation. If set to std::nullopt, the output will be
+   * in one line. Default: 2.
+   * \param separators Two separators used in the schema: comma and colon. Examples: {",", ":"},
+   * {", ", ": "}. If std::nullopt, the default separators will be used: {",", ": "} when the
+   * indent is not -1, and {", ", ": "} otherwise. This follows the convention in python
+   * json.dumps(). Default: std::nullopt. \param strict_mode Whether to use strict mode. In strict
+   * mode, the generated grammar will not allow properties and items that is not specified in the
+   * schema. This is equivalent to setting unevaluatedProperties and unevaluatedItems to false.
+   *
+   * This helps LLM to generate accurate output in the grammar-guided generation with JSON
+   * schema. Default: true.
+   * \returns The EBNF grammar string.
    */
-  static BNFGrammar GetGrammarOfJSON();
+  static std::string _JSONSchemaToEBNF(
+      const std::string& schema,
+      std::optional<int> indent = std::nullopt,
+      std::optional<std::pair<std::string, std::string>> separators = std::nullopt,
+      bool strict_mode = true
+  );
+};
 
-  /*! \brief Print a BNF grammar. */
-  friend std::ostream& operator<<(std::ostream& os, const BNFGrammar& grammar);
+class TokenizerInfo {
+ public:
+  TokenizerInfo(const std::string& hf_tokenizer_str);
+  std::string ToString() const;
+  std::vector<std::string> GetDecodedTokenTable(
+      const std::unordered_map<std::string, int>& raw_token_table
+  ) const;
 
-  XGRAMMAR_DEFINE_PIMPL_METHODS(BNFGrammar);
-
-  friend class BNFGrammarBuilder;
+  XGRAMMAR_DEFINE_PIMPL_METHODS(TokenizerInfo);
 };
 
 /*!
@@ -162,7 +201,10 @@ class GrammarStateMatcher {
    * CreateInitContext as a result of preprocessing the grammar and tokenizer.
    */
   GrammarStateMatcher(
-      std::shared_ptr<GrammarStateInitContext> init_ctx, int max_rollback_steps = 0
+      std::shared_ptr<GrammarStateInitContext> init_ctx,
+      std::optional<std::vector<int>> stop_token_ids = std::nullopt,
+      bool terminate_without_stop_token = false,
+      int max_rollback_steps = 0
   );
 
   /*!
@@ -188,13 +230,21 @@ class GrammarStateMatcher {
    */
   bool AcceptToken(int32_t token_id, bool verbose = false);
 
+  bool _AcceptString(const std::string& input_str, bool verbose = false);
+
+  static uint32_t GetBufferSize(size_t vocab_size);
+
   /*!
    * \brief Find the set of tokens that are acceptable for the next step and store them in a
    * bitmask.
-   * \param next_token_bitmask The bitmask to store the result. The bitmask must be pre-allocated,
-   * and its shape needs to be (ceil(vocab_size, 32),), with a dtype of uint32.
+   * \param next_token_bitmask The bitmask to store the result. The bitmask must be pre-allocated
+   * and with shape (GetBufferSize(vocab_size),) and dtype uint32.
    */
   void FindNextTokenBitmask(DLTensor* next_token_bitmask);
+
+  static void GetRejectedTokensFromBitMask(
+      const DLTensor& token_bitmask, size_t vocab_size, std::vector<int>* rejected_tokens
+  );
 
   /*!
    * \brief Find the jump-forward string for jump-forward decoding. This is the longest string that
@@ -211,7 +261,9 @@ class GrammarStateMatcher {
   void Rollback(int num_tokens);
 
   /*! \brief Get the maximum number of rollback steps allowed. */
-  int MaxRollbackSteps() const;
+  int GetMaxRollbackSteps() const;
+
+  size_t GetVocabSize() const;
 
   /*!
    * \brief Check if the matcher has accepted the stop token and terminated.
@@ -220,7 +272,7 @@ class GrammarStateMatcher {
   bool IsTerminated() const;
 
   /*! \brief Reset the matcher to the initial state. */
-  void ResetState();
+  void Reset();
 
   XGRAMMAR_DEFINE_PIMPL_METHODS(GrammarStateMatcher);
 };

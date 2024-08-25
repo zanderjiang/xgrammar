@@ -6,7 +6,7 @@
 #ifndef XGRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
 #define XGRAMMAR_GRAMMAR_STATE_MATCHER_STATE_H_
 
-#include <xgrammar/grammar.h>
+#include <xgrammar/xgrammar.h>
 
 #include <queue>
 #include <unordered_set>
@@ -347,11 +347,8 @@ inline std::string RulePositionTree::PrintNode(const RulePosition& rule_position
     auto element = grammar_->GetRuleExpr(sequence[rule_position.element_id]);
     if (element.type == BNFGrammar::Impl::RuleExprType::kByteString) {
       ss << ", element in string: " << rule_position.element_in_string;
-    } else {
-      XGRAMMAR_DCHECK(
-          element.type == BNFGrammar::Impl::RuleExprType::kCharacterClass ||
-          element.type == BNFGrammar::Impl::RuleExprType::kCharacterClassStar
-      );
+    } else if (element.type == BNFGrammar::Impl::RuleExprType::kCharacterClass || //
+      element.type == BNFGrammar::Impl::RuleExprType::kCharacterClassStar) {
       ss << ", left utf8 bytes: " << rule_position.left_utf8_bytes;
     }
   }

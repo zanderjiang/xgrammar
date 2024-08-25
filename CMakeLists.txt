@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(xgrammar LANGUAGES CXX)
 
-OPTION(BUILD_BINDINGS "Build Python bindings" ON)
+option(BUILD_BINDINGS "Build Python bindings" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,13 +16,14 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "No build type specified; defaulting to CMAKE_BUILD_TYPE=Debug.")
   set(CMAKE_BUILD_TYPE
-      "Debug"
+      "RelWithDebugInfo"
       CACHE STRING "The build type" FORCE
   )
 endif()
 
-set(XGRAMMAR_INCLUDE_PATH ${PROJECT_SOURCE_DIR}/3rdparty/picojson
-                     ${PROJECT_SOURCE_DIR}/3rdparty/dlpack/include ${PROJECT_SOURCE_DIR}/include
+set(XGRAMMAR_INCLUDE_PATH
+    ${PROJECT_SOURCE_DIR}/3rdparty/picojson ${PROJECT_SOURCE_DIR}/3rdparty/dlpack/include
+    ${PROJECT_SOURCE_DIR}/include
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -34,11 +35,16 @@ endif()
 file(GLOB_RECURSE XGRAMMAR_SOURCES_PATH "${PROJECT_SOURCE_DIR}/cpp/*.cc")
 list(FILTER XGRAMMAR_SOURCES_PATH EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/cpp/pybind/.*\\.cc")
 
-add_library(xgrammar SHARED ${XGRAMMAR_SOURCES_PATH})
+add_library(xgrammar STATIC ${XGRAMMAR_SOURCES_PATH})
 target_include_directories(xgrammar PUBLIC ${XGRAMMAR_INCLUDE_PATH})
 target_compile_definitions(xgrammar PUBLIC ${XGRAMMAR_COMPILE_DEFINITIONS})
 
 if(BUILD_BINDINGS)
-  message(STATUS "XGrammar Python bindings will be built")
+  message(STATUS "XGrammar built with Python bindings")
   add_subdirectory(${PROJECT_SOURCE_DIR}/cpp/pybind)
+  target_compile_options(xgrammar PUBLIC ${TORCH_CXX_FLAGS})
+else()
+  message(STATUS "XGrammar built without Python bindings. If Python bindings are needed, set "
+                 "BUILD_BINDINGS=ON."
+  )
 endif()

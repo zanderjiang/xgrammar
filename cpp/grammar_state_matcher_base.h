@@ -7,7 +7,7 @@
 #define XGRAMMAR_GRAMMAR_STATE_MATCHER_BASE_H_
 
 #include <xgrammar/support/encoding.h>
-#include <xgrammar/grammar.h>
+#include <xgrammar/xgrammar.h>
 
 #include <algorithm>
 #include <vector>
@@ -17,7 +17,8 @@
 
 namespace xgrammar {
 
-/*! \brief The base class of GrammarStateMatcher. It implements a character-based matching
+/*!
+ * \brief The base class of GrammarStateMatcher. It implements a character-based matching
  * automata, and supports accepting a character, rolling back by character, etc.
  */
 class GrammarStateMatcherBase {
@@ -247,9 +248,11 @@ inline bool GrammarStateMatcherBase::AcceptChar(uint8_t char_value, bool verbose
                        << PrintAsEscapedUTF8(char_value) << "\" Accepted";
     XGRAMMAR_LOG(INFO) << "New stack after acceptance: " << PrintStackState();
   }
-#if XGRAMMAR_ENABLE_LOG_DEBUG
-  stack_tops_history_.CheckWellFormed();
-#endif
+
+  constexpr bool DEBUG_CHECK_WELL_FORMED = false;
+  if (DEBUG_CHECK_WELL_FORMED) {
+    stack_tops_history_.CheckWellFormed();
+  }
   return true;
 }
 
