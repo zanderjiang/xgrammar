@@ -3,7 +3,6 @@
 """This test is adopted from test_grammar_state_matcher_json.py, but the grammar is parsed from
 a unoptimized, non-simplified EBNF string. This is to test the robustness of the grammar state
 matcher."""
-import json
 from typing import Dict, List, Tuple
 
 import pytest
@@ -25,9 +24,7 @@ def test_json_schema_accept_find_token():
         object_field: Dict[str, int]
         nested_object_field: Dict[str, Dict[str, int]]
 
-    schema = MainModel.model_json_schema()
-    schema_str = json.dumps(schema)
-    grammar = BuiltinGrammar.json_schema(schema_str, indent=2)
+    grammar = BuiltinGrammar.json_schema(MainModel, indent=2)
 
     instance = MainModel(
         integer_field=42,
@@ -68,9 +65,7 @@ def test_json_schema_find_jump_forward_string():
         object_field: Dict[str, int]
         nested_object_field: Dict[str, Dict[str, int]]
 
-    schema = MainModel.model_json_schema()
-    schema_str = json.dumps(schema)
-    grammar = BuiltinGrammar.json_schema(schema_str, indent=2)
+    grammar = BuiltinGrammar.json_schema(MainModel, indent=2)
 
     instance = MainModel(
         integer_field=42,

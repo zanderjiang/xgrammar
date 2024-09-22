@@ -16,20 +16,23 @@
 
 namespace xgrammar {
 
-class TokenizerInfo::Impl {
+class XGTokenizer::Impl {
  public:
-  Impl(const std::string& hf_tokenizer_str);
+  Impl(const std::string& hf_tokenizer_str, const std::unordered_map<std::string, int>& raw_vocab);
+
   std::string ToString() const;
-  std::vector<std::string> GetDecodedTokenTable(
-      const std::unordered_map<std::string, int>& raw_token_table
-  ) const;
+  std::string GetDecoderType() const { return decoder_type_; }
+  bool GetPrependSpaceInTokenization() const { return prepend_space_in_tokenization_; }
+  const std::vector<std::string>& GetDecodedVocab();
 
  private:
-  std::string token_decoder_type = "byte_fallback";
-  bool prepend_space_in_tokenization = false;
+  std::string decoder_type_ = "byte_fallback";
+  bool prepend_space_in_tokenization_ = false;
+  std::unordered_map<std::string, int> raw_vocab_;
+  std::vector<std::string> decoded_vocab_;
 };
 
-inline std::string DetectTokenDecoderType(const picojson::object& hf_tokenizer_obj) {
+inline std::string DetectDecoderType(const picojson::object& hf_tokenizer_obj) {
 #define CHECK_AND_WARNING(condition, message)                                                   \
   if (!(condition)) {                                                                           \
     XGRAMMAR_LOG(WARNING) << "Token decoder type not detected: (" #condition                    \
@@ -128,26 +131,6 @@ inline bool DetectPrependSpaceInTokenization(const picojson::object& hf_tokenize
   return false;
 }
 
-TokenizerInfo::Impl::Impl(const std::string& hf_tokenizer_str) {
-  picojson::value v;
-  std::string err = picojson::parse(v, hf_tokenizer_str);
-  if (!err.empty() || !v.is<picojson::object>()) {
-    XGRAMMAR_LOG(WARNING) << "Failed to parse JSON object. " << err;
-    return;
-  }
-  const picojson::object& obj = v.get<picojson::object>();
-
-  token_decoder_type = DetectTokenDecoderType(obj);
-  prepend_space_in_tokenization = DetectPrependSpaceInTokenization(obj);
-}
-
-std::string TokenizerInfo::Impl::ToString() const {
-  picojson::object obj;
-  obj["token_postproc_method"] = picojson::value(token_decoder_type);
-  obj["prepend_space_in_encode"] = picojson::value(prepend_space_in_tokenization);
-  return picojson::value(obj).serialize(false);
-}
-
 /*! \brief ByteFallback decoder: transform tokens like <0x1B> to hex char byte 1B */
 inline std::string ByteFallbackDecoder(const std::string& token) {
   if (token.length() == 6 && token.substr(0, 3) == "<0x" && token.back() == '>') {
@@ -186,27 +169,27 @@ inline std::string SpaceReplacerDecoder(const std::string& token) {
  * https://github.com/huggingface/transformers/blob/87be06ca77166e6a6215eee5a990ab9f07238a18/src/transformers/models/gpt2/tokenization_gpt2.py#L38-L59
  */
 inline std::string ByteLevelDecoder(const std::string& token) {
-  // clang-format off
   // The inverse map of bytes_to_unicode. -1 means there is no mapping to this unicode.
   static const std::array<int, 324> char_to_byte_map = {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-    46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
-    69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
-    92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
-    112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, -1,
-    174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
-    192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209,
-    210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
-    228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245,
-    246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-    13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 127, 128,
-    129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146,
-    147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 173
+      // clang-format off
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+      46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
+      69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
+      92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+      112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, -1,
+      174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
+      192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209,
+      210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
+      228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245,
+      246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+      13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 127, 128,
+      129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146,
+      147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 173
+      // clang-format on
   };
-  // clang-format on
 
   auto unicode_codepoints = ParseUTF8(token.c_str(), UTF8ErrorPolicy::kReturnInvalid);
   if (unicode_codepoints.size() == 1 && unicode_codepoints[0] == kInvalidUTF8) {
@@ -231,22 +214,49 @@ inline std::string ByteLevelDecoder(const std::string& token) {
 /*!
  * \brief Post-process a raw token to the actual token with the given post-processing method.
  */
-inline std::string DecodeToken(const std::string& token, const std::string& token_decoder_type) {
-  if (token_decoder_type == "byte_fallback") {
+inline std::string DecodeToken(const std::string& token, const std::string& decoder_type) {
+  if (decoder_type == "byte_fallback") {
     return SpaceReplacerDecoder(ByteFallbackDecoder(token));
-  } else if (token_decoder_type == "byte_level") {
+  } else if (decoder_type == "byte_level") {
     return ByteLevelDecoder(token);
   } else {
-    XGRAMMAR_LOG(FATAL) << "Unknown token decoder type: " << token_decoder_type;
+    XGRAMMAR_LOG(FATAL) << "Unknown token decoder type: " << decoder_type;
   }
 }
 
-std::vector<std::string> TokenizerInfo::Impl::GetDecodedTokenTable(
-    const std::unordered_map<std::string, int>& raw_token_table
-) const {
+XGTokenizer::Impl::Impl(
+    const std::string& hf_tokenizer_str, const std::unordered_map<std::string, int>& raw_vocab
+)
+    : raw_vocab_(raw_vocab) {
+  picojson::value v;
+  std::string err = picojson::parse(v, hf_tokenizer_str);
+  if (!err.empty() || !v.is<picojson::object>()) {
+    XGRAMMAR_LOG(WARNING) << "Failed to parse JSON object. " << err;
+    return;
+  }
+  const picojson::object& obj = v.get<picojson::object>();
+
+  decoder_type_ = DetectDecoderType(obj);
+  prepend_space_in_tokenization_ = DetectPrependSpaceInTokenization(obj);
+
+  XGRAMMAR_CHECK(!raw_vocab.empty()) << "Tokenizer vocabulary is empty";
+}
+
+std::string XGTokenizer::Impl::ToString() const {
+  picojson::object obj;
+  obj["decoder_type"] = picojson::value(decoder_type_);
+  obj["prepend_space_in_tokenization"] = picojson::value(prepend_space_in_tokenization_);
+  return picojson::value(obj).serialize(false);
+}
+
+const std::vector<std::string>& XGTokenizer::Impl::GetDecodedVocab() {
+  if (!decoded_vocab_.empty()) {
+    return decoded_vocab_;
+  }
+
   std::vector<std::pair<const std::string*, int>> sorted_token_and_ids;
-  sorted_token_and_ids.reserve(raw_token_table.size());
-  for (const auto& pair : raw_token_table) {
+  sorted_token_and_ids.reserve(raw_vocab_.size());
+  for (const auto& pair : raw_vocab_) {
     sorted_token_and_ids.emplace_back(&pair.first, pair.second);
   }
   std::sort(
@@ -255,23 +265,26 @@ std::vector<std::string> TokenizerInfo::Impl::GetDecodedTokenTable(
       [](const auto& a, const auto& b) { return a.second < b.second; }
   );
 
-  std::vector<std::string> decoded_token_table;
-  decoded_token_table.reserve(sorted_token_and_ids.size());
+  decoded_vocab_.reserve(sorted_token_and_ids.size());
   for (const auto& item : sorted_token_and_ids) {
-    decoded_token_table.emplace_back(DecodeToken(*item.first, token_decoder_type));
+    decoded_vocab_.emplace_back(DecodeToken(*item.first, decoder_type_));
   }
-  return decoded_token_table;
+  return decoded_vocab_;
 }
 
-TokenizerInfo::TokenizerInfo(const std::string& hf_tokenizer_str)
-    : pimpl_(std::make_shared<TokenizerInfo::Impl>(hf_tokenizer_str)) {}
+XGTokenizer::XGTokenizer(
+    const std::string& hf_tokenizer_str, const std::unordered_map<std::string, int>& raw_vocab
+)
+    : pimpl_(std::make_shared<Impl>(hf_tokenizer_str, raw_vocab)) {}
 
-std::string TokenizerInfo::ToString() const { return pimpl_->ToString(); }
+std::string XGTokenizer::ToString() const { return pimpl_->ToString(); }
 
-std::vector<std::string> TokenizerInfo::GetDecodedTokenTable(
-    const std::unordered_map<std::string, int>& raw_token_table
-) const {
-  return pimpl_->GetDecodedTokenTable(raw_token_table);
+std::string XGTokenizer::GetDecoderType() const { return pimpl_->GetDecoderType(); }
+
+bool XGTokenizer::GetPrependSpaceInTokenization() const {
+  return pimpl_->GetPrependSpaceInTokenization();
 }
+
+const std::vector<std::string>& XGTokenizer::GetDecodedVocab() { return pimpl_->GetDecodedVocab(); }
 
 }  // namespace xgrammar
