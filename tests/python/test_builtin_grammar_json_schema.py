@@ -1,15 +1,14 @@
-# pylint: disable=missing-module-docstring,missing-function-docstring
-# pylint: disable=redefined-outer-name,unbalanced-tuple-unpacking
 """This test is adopted from test_grammar_state_matcher_json.py, but the grammar is parsed from
 a unoptimized, non-simplified EBNF string. This is to test the robustness of the grammar state
-matcher."""
+matcher.
+"""
+
 from typing import Dict, List, Tuple
 
 import pytest
 from pydantic import BaseModel
 from transformers import AutoTokenizer
-
-from xgrammar import BNFGrammar, GrammarStateMatcher
+from xgrammar import GrammarStateMatcher
 from xgrammar.xgrammar import BuiltinGrammar
 
 

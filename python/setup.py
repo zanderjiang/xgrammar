@@ -17,9 +17,6 @@
 import glob
 import os
 import platform
-import shutil
-import sys
-from typing import List
 
 from setuptools import find_packages, setup
 from setuptools.dist import Distribution
@@ -29,21 +26,22 @@ PYTHON_SRC_DIR = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 PROJECT_DIR = os.path.dirname(PYTHON_SRC_DIR)
 
 
-def get_version():
+def get_version() -> str:
     version_path = os.path.join(PYTHON_SRC_DIR, "xgrammar", "version.py")
     if not os.path.exists(version_path) or not os.path.isfile(version_path):
-        raise RuntimeError(f"Version file not found: {version_path}")
+        msg = f"Version file not found: {version_path}"
+        raise RuntimeError(msg)
     with open(version_path) as f:
         code = compile(f.read(), version_path, "exec")
     loc = {}
     exec(code, loc)
     if "__version__" not in loc:
-        raise RuntimeError("Version info is not found in xgrammar/version.py")
-    print("version:", loc["__version__"])
+        msg = "Version info is not found in xgrammar/version.py"
+        raise RuntimeError(msg)
     return loc["__version__"]
 
 
-def parse_requirements(filename: os.PathLike):
+def parse_requirements(filename: os.PathLike) -> list[str]:
     with open(filename) as f:
         requirements = f.read().splitlines()
 
@@ -53,7 +51,7 @@ def parse_requirements(filename: os.PathLike):
         extra_URLs = []
         deps = []
         for line in requirements:
-            if line.startswith("#") or line.startswith("-r"):
+            if line.startswith(("#", "-r")):
                 continue
 
             # handle -i and --extra-index-url options
@@ -67,11 +65,11 @@ def parse_requirements(filename: os.PathLike):
 class BinaryDistribution(Distribution):
     """This class is needed in order to create OS specific wheels."""
 
-    def has_ext_modules(self):
+    def has_ext_modules(self) -> bool:
         """Return True for binary distribution."""
         return True
 
-    def is_pure(self):
+    def is_pure(self) -> bool:
         """Return False for binary distribution."""
         return False
 
@@ -85,20 +83,22 @@ def get_xgrammar_lib() -> str:
 
     lib_paths = glob.glob(lib_glob)
     if len(lib_paths) == 0 or not os.path.isfile(lib_paths[0]):
-        raise RuntimeError(
+        msg = (
             "Cannot find xgrammar bindings library. Please build the library first. Search path: "
             f"{lib_glob}"
         )
-    elif len(lib_paths) > 1:
-        raise RuntimeError(
+        raise RuntimeError(msg)
+    if len(lib_paths) > 1:
+        msg = (
             f"Found multiple xgrammar bindings libraries: {lib_paths}. "
             "Please remove the extra ones."
         )
+        raise RuntimeError(msg)
 
     return lib_paths[0]
 
 
-def main():
+def main() -> None:
     xgrammar_lib_path = get_xgrammar_lib()
 
     setup(

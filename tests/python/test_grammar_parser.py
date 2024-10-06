@@ -1,4 +1,3 @@
-# pylint: disable=missing-module-docstring,missing-function-docstring
 import json
 
 import pytest
@@ -196,7 +195,6 @@ exponent_choice_1 ::= ("" | ("+") | ("-"))
 
 def test_to_string_roundtrip():
     """Checks the printed result can be parsed, and the parsing-printing process is idempotent."""
-
     before = r"""main ::= ((b c) | (b main))
 b ::= ((b_1 d))
 c ::= ((c_1))
@@ -221,14 +219,10 @@ def test_error():
     ):
         BNFGrammar("main ::= a b")
 
-    with pytest.raises(
-        RuntimeError, match="EBNF parse error at line 1, column 15: Expect element"
-    ):
+    with pytest.raises(RuntimeError, match="EBNF parse error at line 1, column 15: Expect element"):
         BNFGrammar('main ::= "a" |')
 
-    with pytest.raises(
-        RuntimeError, match='EBNF parse error at line 1, column 15: Expect "'
-    ):
+    with pytest.raises(RuntimeError, match='EBNF parse error at line 1, column 15: Expect "'):
         BNFGrammar('main ::= "a" "')
 
     with pytest.raises(
@@ -262,15 +256,12 @@ def test_error():
     ):
         BNFGrammar(r"main ::= [Z-A]")
 
-    with pytest.raises(
-        RuntimeError, match="EBNF parse error at line 1, column 6: Expect ::="
-    ):
+    with pytest.raises(RuntimeError, match="EBNF parse error at line 1, column 6: Expect ::="):
         BNFGrammar(r'main := "a"')
 
     with pytest.raises(
         RuntimeError,
-        match='EBNF parse error at line 2, column 9: Rule "main" is defined multiple '
-        "times",
+        match='EBNF parse error at line 2, column 9: Rule "main" is defined multiple times',
     ):
         BNFGrammar('main ::= "a"\nmain ::= "b"')
 
@@ -303,12 +294,12 @@ c ::= [a-z]
         "rule_expr_data": [
             # fmt: off
             4,1,1,4,1,2,5,2,0,1,4,1,1,4,1,0,5,2,3,4,6,2,2,5,0,3,98,99,
-            100,5,1,7,6,1,8,1,3,0,97,122,5,1,10,6,1,11
+            100,5,1,7,6,1,8,1,3,0,97,122,5,1,10,6,1,11,
             # fmt: on
         ],
     }
     bnf_grammar = BNFGrammar(before, "main")
-    after_str = bnf_grammar.serialize(False)
+    after_str = bnf_grammar.serialize(prettify=False)
     after_obj = json.loads(after_str)
     assert after_obj == expected_obj
 
@@ -324,9 +315,9 @@ c_2 ::= (([acep-z]))
 d_1 ::= ("" | ("d"))
 """
     bnf_grammar_1 = BNFGrammar(before, "main")
-    output_json_1 = bnf_grammar_1.serialize(False)
+    output_json_1 = bnf_grammar_1.serialize(prettify=False)
     bnf_grammar_2 = BNFGrammar.deserialize(output_json_1)
-    output_json_2 = bnf_grammar_2.serialize(False)
+    output_json_2 = bnf_grammar_2.serialize(prettify=False)
     output_str = bnf_grammar_2.to_string()
     assert output_json_1 == output_json_2
     assert output_str == before

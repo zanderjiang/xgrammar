@@ -1,12 +1,10 @@
-# pylint: disable=missing-module-docstring,missing-function-docstring
-# pylint: disable=redefined-outer-name,unbalanced-tuple-unpacking
 """This test uses the optimized JSON grammar provided by the grammar library."""
+
 from typing import List, Optional
 
 import pytest
 import torch
 from transformers import AutoTokenizer
-
 from xgrammar import BNFGrammar, BuiltinGrammar, GrammarStateMatcher
 
 json_grammar = BuiltinGrammar.json()
@@ -48,7 +46,7 @@ tokenizer_path__input_str__expected_rejected_sizes = [
         [
             # fmt: off
             31989, 31912, 272, 272, 272, 31973, 31846, 31846, 31948, 31915, 272, 272, 272, 272,
-            272, 31973, 31846, 31846, 265, 265, 265, 265, 265, 265, 265, 265, 31974, 31999
+            272, 31973, 31846, 31846, 265, 265, 265, 265, 265, 265, 265, 265, 31974, 31999,
             # fmt: on
         ],
     ),
@@ -60,7 +58,7 @@ tokenizer_path__input_str__expected_rejected_sizes = [
             # fmt: off
             128235, 127497, 5002, 5002, 5002, 127849, 126399, 126399, 126760, 127499, 5002, 5002,
             5002, 5002, 5002, 127849, 126399, 126399, 4952, 4952, 4952, 4952, 4952, 4952, 4952,
-            4952, 128066, 128111, 4952, 128066, 128111, 4952, 127873, 128254
+            4952, 128066, 128111, 4952, 128066, 128111, 4952, 127873, 128254,
             # fmt: on
         ],
     ),
@@ -68,7 +66,7 @@ tokenizer_path__input_str__expected_rejected_sizes = [
 
 
 @pytest.mark.parametrize(
-    "tokenizer_path,input_str,expected_rejected_sizes",
+    ("tokenizer_path", "input_str", "expected_rejected_sizes"),
     tokenizer_path__input_str__expected_rejected_sizes,
 )
 def test_find_next_rejected_tokens(
@@ -184,9 +182,7 @@ def test_rollback():
         assert matcher.accept_token(i_1)
         result_after_rollback.append(matcher.find_next_token_bitmask())
         assert matcher.accept_token(i_2)
-        assert all(
-            torch.all(l == r) for l, r in zip(orig_result, result_after_rollback)
-        )
+        assert all(torch.all(l == r) for l, r in zip(orig_result, result_after_rollback))
 
 
 def test_reset():
