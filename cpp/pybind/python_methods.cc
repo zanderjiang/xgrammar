@@ -22,48 +22,49 @@ BNFGrammar BNFGrammar_InitNoNormalization(
   return EBNFParser::Parse(ebnf_string, main_rule);
 }
 
-GrammarStateMatcher GrammarStateMatcher_Init(
-    const BNFGrammar& grammar,
+TokenizerInfo TokenizerInfo_Init(
     const std::vector<std::string>& vocab,
-    std::optional<std::vector<int>> stop_token_ids,
-    bool terminate_without_stop_token,
-    std::optional<int> mask_vocab_size,
-    int max_rollback_steps
+    std::string vocab_type,
+    bool prepend_space_in_tokenization
 ) {
-  return GrammarStateMatcher(
-      GrammarStateMatcher::CreateInitContext(grammar, vocab),
-      stop_token_ids,
-      terminate_without_stop_token,
-      mask_vocab_size,
-      max_rollback_steps
-  );
+  static const std::unordered_map<std::string, VocabType> VOCAB_TYPE_MAP = {
+      {"RAW", VocabType::RAW},
+      {"BYTE_FALLBACK", VocabType::BYTE_FALLBACK},
+      {"BYTE_LEVEL", VocabType::BYTE_LEVEL},
+  };
+  return TokenizerInfo(vocab, VOCAB_TYPE_MAP.at(vocab_type), prepend_space_in_tokenization);
 }
 
-GrammarStateMatcher GrammarStateMatcher_Init(
-    const BNFGrammar& grammar,
-    std::nullptr_t,
-    std::optional<std::vector<int>> stop_token_ids,
-    bool terminate_without_stop_token,
-    std::optional<int> mask_vocab_size,
-    int max_rollback_steps
-) {
-  return GrammarStateMatcher(
-      GrammarStateMatcher::CreateInitContext(grammar, {}),
-      stop_token_ids,
-      terminate_without_stop_token,
-      mask_vocab_size,
-      max_rollback_steps
-  );
+std::string TokenizerInfo_GetVocabType(const TokenizerInfo& tokenizer) {
+  static const std::string VOCAB_TYPE_NAMES[] = {"RAW", "BYTE_FALLBACK", "BYTE_LEVEL"};
+  return VOCAB_TYPE_NAMES[static_cast<int>(tokenizer.GetVocabType())];
 }
 
-std::vector<pybind11::bytes> XGTokenizer_GetDecodedVocab(XGTokenizer& tokenizer) {
-  auto result = tokenizer.GetDecodedVocab();
+std::vector<pybind11::bytes> TokenizerInfo_GetRawVocab(TokenizerInfo& tokenizer) {
+  auto result = tokenizer.GetRawVocab();
   std::vector<pybind11::bytes> py_result;
   py_result.reserve(result.size());
   for (const auto& item : result) {
     py_result.emplace_back(pybind11::bytes(item));
   }
   return py_result;
+}
+
+GrammarStateMatcher GrammarStateMatcher_Init(
+    const BNFGrammar& grammar,
+    const TokenizerInfo& tokenizer_info,
+    std::optional<std::vector<int>> stop_token_ids,
+    bool terminate_without_stop_token,
+    std::optional<int> mask_vocab_size,
+    int max_rollback_steps
+) {
+  return GrammarStateMatcher(
+      GrammarStateMatcher::CreateInitContext(grammar, tokenizer_info),
+      stop_token_ids,
+      terminate_without_stop_token,
+      mask_vocab_size,
+      max_rollback_steps
+  );
 }
 
 torch::Tensor GrammarStateMatcher_FindNextTokenBitmask(GrammarStateMatcher& matcher) {

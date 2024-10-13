@@ -22,25 +22,24 @@ BNFGrammar BNFGrammar_InitNoNormalization(
     const std::string& ebnf_string, const std::string& main_rule
 );
 
-GrammarStateMatcher GrammarStateMatcher_Init(
-    const BNFGrammar& grammar,
+TokenizerInfo TokenizerInfo_Init(
     const std::vector<std::string>& vocab,
-    std::optional<std::vector<int>> stop_token_ids,
-    bool terminate_without_stop_token,
-    std::optional<int> mask_vocab_size,
-    int max_rollback_steps
+    std::string vocab_type,
+    bool prepend_space_in_tokenization
 );
+
+std::string TokenizerInfo_GetVocabType(const TokenizerInfo& tokenizer);
+
+std::vector<pybind11::bytes> TokenizerInfo_GetRawVocab(TokenizerInfo& tokenizer);
 
 GrammarStateMatcher GrammarStateMatcher_Init(
     const BNFGrammar& grammar,
-    std::nullptr_t,
+    const TokenizerInfo& tokenizer_info,
     std::optional<std::vector<int>> stop_token_ids,
     bool terminate_without_stop_token,
     std::optional<int> mask_vocab_size,
     int max_rollback_steps
 );
-
-std::vector<pybind11::bytes> XGTokenizer_GetDecodedVocab(XGTokenizer& tokenizer);
 
 torch::Tensor GrammarStateMatcher_FindNextTokenBitmask(GrammarStateMatcher& matcher);
 
