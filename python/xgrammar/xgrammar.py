@@ -14,11 +14,11 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Classes handling the grammar guided generation of MLC LLM serving."""
+"""Classes handling the grammar guided generation."""
 
-from enum import Enum
 import json
-from typing import List, Optional, Tuple, Type, Union
+from enum import Enum
+from typing import List, Optional, Tuple, Type, Union, overload
 
 import torch
 from pydantic import BaseModel
@@ -172,7 +172,7 @@ class BuiltinGrammar:
     def json_schema(
         schema: Union[str, Type[BaseModel]],
         *,
-        indent: Optional[int] = 2,
+        indent: Optional[int] = None,
         separators: Optional[Tuple[str, str]] = None,
         strict_mode: bool = True,
     ) -> BNFGrammar:
@@ -218,7 +218,7 @@ class BuiltinGrammar:
     def _json_schema_to_ebnf(
         schema: str,
         *,
-        indent: Optional[int] = 2,
+        indent: Optional[int] = None,
         separators: Optional[Tuple[str, str]] = None,
         strict_mode: bool = True,
     ) -> str:
@@ -334,14 +334,61 @@ class TokenizerInfo(XGObject):
         )
 
 
-class GrammarMatcherInitContext:
-    def __init__(self, grammar: BNFGrammar, decoded_vocab: Optional[List[str]]) -> None:
-        self.handle = _core.GrammarMatcherInitContext(grammar.handle, decoded_vocab)
+class GrammarMatcherInitContext(XGObject):
+    def __init__(
+        self,
+        grammar: BNFGrammar,
+        tokenizer_or_vocab: Union[
+            None, PreTrainedTokenizerBase, TokenizerInfo, List[Union[bytes, str]]
+        ] = None,
+    ) -> None:
+        # convert tokenizer_or_vocab to TokenizerInfo
+        if isinstance(tokenizer_or_vocab, PreTrainedTokenizerBase):
+            tokenizer_or_vocab = TokenizerInfo.from_huggingface(tokenizer_or_vocab)
+        elif isinstance(tokenizer_or_vocab, list):
+            tokenizer_or_vocab = TokenizerInfo(tokenizer_or_vocab)
+        elif tokenizer_or_vocab is None:
+            tokenizer_or_vocab = TokenizerInfo([])
+        if not isinstance(tokenizer_or_vocab, TokenizerInfo):
+            raise ValueError(f"Unsupported tokenizer_or_vocab type: {type(tokenizer_or_vocab)}")
+
+        self.init_with_handle(
+            _core.GrammarMatcherInitContext(grammar.handle, tokenizer_or_vocab.handle)
+        )
 
 
-# class GrammarMatcherInitContextCache:
-#     def __init__(self, vocab: List[bytes]):
-#         self.handle = _core.GrammarMatcherInitContextCache(cache.handle)
+class GrammarMatcherInitContextCache(XGObject):
+    def __init__(
+        self,
+        tokenizer_or_vocab: Union[PreTrainedTokenizerBase, TokenizerInfo, List[Union[bytes, str]]],
+    ):
+        # convert tokenizer_or_vocab to TokenizerInfo
+        if isinstance(tokenizer_or_vocab, PreTrainedTokenizerBase):
+            tokenizer_or_vocab = TokenizerInfo.from_huggingface(tokenizer_or_vocab)
+        elif isinstance(tokenizer_or_vocab, list):
+            tokenizer_or_vocab = TokenizerInfo(tokenizer_or_vocab)
+        if not isinstance(tokenizer_or_vocab, TokenizerInfo):
+            raise ValueError(f"Unsupported tokenizer_or_vocab type: {type(tokenizer_or_vocab)}")
+
+        self.init_with_handle(_core.GrammarMatcherInitContextCache(tokenizer_or_vocab.handle))
+
+    def get_init_context_for_json(self) -> GrammarMatcherInitContext:
+        return GrammarMatcherInitContext.from_handle(self.handle.get_init_context_for_json())
+
+    def get_init_context_for_json_schema(
+        self,
+        schema: Union[str, Type[BaseModel]],
+        *,
+        indent: Optional[int] = None,
+        separators: Optional[Tuple[str, str]] = None,
+        strict_mode: bool = True,
+    ) -> GrammarMatcherInitContext:
+        if isinstance(schema, type) and issubclass(schema, BaseModel):
+            schema = json.dumps(schema.model_json_schema())
+
+        return GrammarMatcherInitContext.from_handle(
+            self.handle.get_init_context_for_json_schema(schema, indent, separators, strict_mode)
+        )
 
 
 class GrammarMatcher(XGObject):
@@ -372,6 +419,7 @@ class GrammarMatcher(XGObject):
 
     """
 
+    @overload
     def __init__(
         self,
         grammar: BNFGrammar,
@@ -383,25 +431,44 @@ class GrammarMatcher(XGObject):
         terminate_without_stop_token: bool = False,
         mask_vocab_size: Optional[int] = None,
         max_rollback_steps: int = 0,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        grammar_matcher_init_context: GrammarMatcherInitContext,
+        *,
+        stop_token_ids: Union[None, int, List[int]] = None,
+        terminate_without_stop_token: bool = False,
+        mask_vocab_size: Optional[int] = None,
+        max_rollback_steps: int = 0,
+    ) -> None: ...
+
+    def __init__(
+        self,
+        grammar_or_context: Union[BNFGrammar, GrammarMatcherInitContext],
+        tokenizer_or_vocab: Union[
+            None, PreTrainedTokenizerBase, TokenizerInfo, List[Union[bytes, str]]
+        ] = None,
+        *,
+        stop_token_ids: Union[None, int, List[int]] = None,
+        terminate_without_stop_token: bool = False,
+        mask_vocab_size: Optional[int] = None,
+        max_rollback_steps: int = 0,
     ) -> None:
+        if isinstance(grammar_or_context, BNFGrammar):
+            grammar_matcher_init_context = GrammarMatcherInitContext(
+                grammar_or_context, tokenizer_or_vocab
+            )
+        else:
+            grammar_matcher_init_context = grammar_or_context
+
         if isinstance(stop_token_ids, int):
             stop_token_ids = [stop_token_ids]
 
-        # convert tokenizer_or_vocab to TokenizerInfo
-        if isinstance(tokenizer_or_vocab, PreTrainedTokenizerBase):
-            tokenizer_or_vocab = TokenizerInfo.from_huggingface(tokenizer_or_vocab)
-        elif isinstance(tokenizer_or_vocab, list):
-            tokenizer_or_vocab = TokenizerInfo(tokenizer_or_vocab)
-        elif tokenizer_or_vocab is None:
-            tokenizer_or_vocab = TokenizerInfo([])
-
-        if not isinstance(tokenizer_or_vocab, TokenizerInfo):
-            raise ValueError(f"Unsupported tokenizer_or_vocab type: {type(tokenizer_or_vocab)}")
-
         self.init_with_handle(
             _core.GrammarMatcher(
-                grammar.handle,
-                tokenizer_or_vocab.handle,
+                grammar_matcher_init_context.handle,
                 stop_token_ids,
                 terminate_without_stop_token,
                 mask_vocab_size,
@@ -434,7 +501,7 @@ class GrammarMatcher(XGObject):
         """
         return self.handle.accept_token(token_id, verbose)
 
-    def _accept_string(self, input_str: str, *, verbose: bool = False) -> bool:
+    def accept_string(self, input_str: Union[str, bytes], *, verbose: bool = False) -> bool:
         """Accept one unicode codepoint to the current state. For test purposes.
 
         Parameters
@@ -443,7 +510,7 @@ class GrammarMatcher(XGObject):
             The unicode codepoint of the character to be accepted.
 
         """
-        return self.handle._accept_string(input_str, verbose)
+        return self.handle.accept_string(input_str, verbose)
 
     def find_next_token_bitmask(self) -> torch.Tensor:
         """Find the ids of the rejected tokens for the next step.
@@ -514,7 +581,7 @@ class GrammarMatcher(XGObject):
         """
         return self.handle.find_jump_forward_string()
 
-    def rollback(self, num_tokens: int) -> None:
+    def rollback(self, num_tokens: int = 1) -> None:
         """Rollback the matcher to a previous state.
 
         Parameters

@@ -174,32 +174,28 @@ class TokenizerInfo {
       const std::vector<std::string>& vocab, const std::string& metadata
   );
 
- private:
   XGRAMMAR_DEFINE_PIMPL_METHODS(TokenizerInfo);
 };
-
-// class TokenizerInfo {
-//  public:
-//   TokenizerInfo(
-//       const std::string& hf_tokenizer_str, const std::unordered_map<std::string, int>& raw_vocab
-//   );
-
-//   std::string ToString() const;
-
-//   std::string GetDecoderType() const;
-
-//   bool GetPrependSpaceInTokenization() const;
-
-//   const std::vector<std::string>& GetDecodedVocab();
-
-//   XGRAMMAR_DEFINE_PIMPL_METHODS(Tok);
-// };
 
 /*!
  * \brief The init context of a GrammarMatcher. It contains the preprocessing results of the
  * grammar and tokenizer.
  */
-class GrammarMatcherInitContext;
+class GrammarMatcherInitContext {
+ public:
+  /*!
+   * \brief Specify a grammar and raw vocabulary to return their preprocessing results. These
+   * results are used to construct a GrammarMatcher. They can be stored elsewhere for quick
+   * construction of GrammarMatcher.
+   * \param grammar The grammar that the matcher follows.
+   * \param raw_vocab The tokens that the matcher requires for matching.
+   */
+  GrammarMatcherInitContext(const BNFGrammar& grammar, const std::vector<std::string>& raw_vocab);
+
+  GrammarMatcherInitContext(const BNFGrammar& grammar, const TokenizerInfo& tokenizer_info);
+
+  XGRAMMAR_DEFINE_PIMPL_METHODS(GrammarMatcherInitContext);
+};
 
 /*!
  * \brief A stateful matcher to match tokens to the specified BNF grammar. This class is the core
@@ -238,26 +234,11 @@ class GrammarMatcher {
    * CreateInitContext as a result of preprocessing the grammar and tokenizer.
    */
   GrammarMatcher(
-      std::shared_ptr<GrammarMatcherInitContext> init_ctx,
+      const GrammarMatcherInitContext& init_ctx,
       std::optional<std::vector<int>> stop_token_ids = std::nullopt,
       bool terminate_without_stop_token = false,
       std::optional<int> mask_vocab_size = std::nullopt,
       int max_rollback_steps = 0
-  );
-
-  /*!
-   * \brief Specify a grammar and decoded vocabulary to return their preprocessing results. These
-   * results are used to construct a GrammarMatcher. They can be stored elsewhere for quick
-   * construction of GrammarMatcher.
-   * \param grammar The grammar that the matcher follows.
-   * \param decoded_vocab The tokens that the matcher requires for matching.
-   */
-  static std::shared_ptr<GrammarMatcherInitContext> CreateInitContext(
-      const BNFGrammar& grammar, const std::vector<std::string>& decoded_vocab
-  );
-
-  static std::shared_ptr<GrammarMatcherInitContext> CreateInitContext(
-      const BNFGrammar& grammar, const TokenizerInfo& tokenizer_info
   );
 
   /*!
@@ -272,7 +253,7 @@ class GrammarMatcher {
    */
   bool AcceptToken(int32_t token_id, bool verbose = false);
 
-  bool _AcceptString(const std::string& input_str, bool verbose = false);
+  bool AcceptString(const std::string& input_str, bool verbose = false);
 
   static uint32_t GetBufferSize(size_t vocab_size);
 
@@ -300,7 +281,7 @@ class GrammarMatcher {
    * \param num_tokens The number of tokens to rollback. It cannot exceed the current number of
    * steps, nor can it exceed the specified maximum number of rollback steps.
    */
-  void Rollback(int num_tokens);
+  void Rollback(int num_tokens = 1);
 
   /*! \brief Get the maximum number of rollback steps allowed. */
   int GetMaxRollbackSteps() const;
@@ -331,15 +312,22 @@ class GrammarMatcherInitContextCache {
   /*!
    * \brief Construct a GrammarMatcherInitContextCache with a vocabulary. This class will always
    * create grammar state init contexts with this vocabulary.
-   * \param decoded_vocab The vocabulary that the grammar will use.
+   * \param raw_vocab The vocabulary that the grammar will use.
    */
-  GrammarMatcherInitContextCache(const std::vector<std::string>& decoded_vocab);
+  GrammarMatcherInitContextCache(const std::vector<std::string>& raw_vocab);
+
+  GrammarMatcherInitContextCache(const TokenizerInfo& tokenizer_info);
 
   /*! \brief Get the init context for pure JSON. */
-  std::shared_ptr<GrammarMatcherInitContext> GetInitContextForJSON();
+  GrammarMatcherInitContext GetInitContextForJSON();
 
   /*! \brief Get the init context for a JSON schema string. */
-  std::shared_ptr<GrammarMatcherInitContext> GetInitContextForJSONSchema(const std::string& schema);
+  GrammarMatcherInitContext GetInitContextForJSONSchema(
+      const std::string& schema,
+      std::optional<int> indent = std::nullopt,
+      std::optional<std::pair<std::string, std::string>> separators = std::nullopt,
+      bool strict_mode = true
+  );
 
   /*! \brief Clear the interal cache of init contexts. */
   void Clear();

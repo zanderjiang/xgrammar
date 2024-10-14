@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-addopts = "-rA --durations=0"
+addopts = "-rA --durations=0 --ignore=3rdparty"
 
 [tool.mypy]
 strict = true
@@ -40,3 +40,6 @@ exclude = "3rdparty/*"
 
 [tool.ruff.lint.pylint]
 max-args = 10
+
+[tool.isort]
+profile = "black"
