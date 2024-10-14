@@ -1,15 +1,13 @@
 """This test uses the optimized JSON grammar provided by the grammar library."""
 
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import pytest
-import torch
 from pydantic import BaseModel
 from transformers import AutoTokenizer
 
 from xgrammar import (
-    BNFGrammar,
     BuiltinGrammar,
     GrammarMatcher,
     GrammarMatcherInitContext,
@@ -28,7 +26,7 @@ def test_init_context():
     print(f"Time to init context: {(time_end - time_start) / 1e3} us")
 
     def check_matcher(matcher: GrammarMatcher):
-        assert matcher.vocab_size == 32000
+        assert matcher.mask_vocab_size == 32000
         assert not matcher.is_terminated()
         assert not matcher.accept_string('{ name: "John" }')
         assert matcher.accept_string('{"name": "John"}')
@@ -55,7 +53,7 @@ def test_init_context_cache_json():
     print(f"Time to init context cache: {(time_end - time_start) / 1e3} us")
 
     def check_matcher(matcher: GrammarMatcher):
-        assert matcher.vocab_size == 32000
+        assert matcher.mask_vocab_size == 32000
         assert not matcher.is_terminated()
         assert not matcher.accept_string('{ name: "John" }')
         assert matcher.accept_string('{"name": "John"}')
@@ -113,7 +111,7 @@ def test_init_context_cache_json_schema():
         print(f"Time to get init context {test_id}: {(time_end - time_start) / 1e3} us")
         matcher = GrammarMatcher(init_context, terminate_without_stop_token=True)
 
-        assert matcher.vocab_size == 32000
+        assert matcher.mask_vocab_size == 32000
         assert not matcher.is_terminated()
         assert matcher.accept_string(instance_str)
         assert matcher.is_terminated()
