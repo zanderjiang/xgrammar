@@ -1,6 +1,7 @@
 """This test uses the optimized JSON grammar provided by the grammar library."""
 
 import sys
+import time
 from typing import List, Optional
 
 import pytest
@@ -88,8 +89,8 @@ def test_get_next_rejected_tokens(
 
     for i, c in enumerate(input_bytes):
         bitmask = matcher.get_next_token_bitmask()
-        rejected_token_ids = GrammarMatcher.get_rejected_tokens_from_bitmask(
-            bitmask, matcher.mask_vocab_size
+        rejected_token_ids = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+            bitmask, matcher.vocab_size
         )
         rejected_sizes.append(len(rejected_token_ids))
         if expected_rejected_sizes is not None:
@@ -100,8 +101,8 @@ def test_get_next_rejected_tokens(
         assert matcher.accept_string(bytes([c]))
 
     bitmask = matcher.get_next_token_bitmask()
-    rejected_token_ids = GrammarMatcher.get_rejected_tokens_from_bitmask(
-        bitmask, matcher.mask_vocab_size
+    rejected_token_ids = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+        bitmask, matcher.vocab_size
     )
     rejected_sizes.append(len(rejected_token_ids))
     if expected_rejected_sizes is not None:
@@ -139,8 +140,8 @@ def test_token_operations():
 
     for id in input_ids:
         bitmask = matcher.get_next_token_bitmask()
-        rejected_token_ids = GrammarMatcher.get_rejected_tokens_from_bitmask(
-            bitmask, matcher.mask_vocab_size
+        rejected_token_ids = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+            bitmask, matcher.vocab_size
         )
         accepted = list(set(range(len(vocab))) - set(rejected_token_ids))
         accepted_tokens = [vocab[i] for i in accepted]
@@ -149,8 +150,8 @@ def test_token_operations():
         assert matcher.accept_token(id)
 
     bitmask = matcher.get_next_token_bitmask()
-    rejected_token_ids = GrammarMatcher.get_rejected_tokens_from_bitmask(
-        bitmask, matcher.mask_vocab_size
+    rejected_token_ids = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+        bitmask, matcher.vocab_size
     )
     accepted = list(set(range(len(vocab))) - set(rejected_token_ids))
     accepted_tokens = [vocab[i] for i in accepted]
@@ -162,12 +163,45 @@ def test_token_operations():
 def test_apply_token_bitmask_inplace():
     neginf = float("-inf")
     bool_mask = torch.tensor([0, 1, 0, 1, 0, 1, 0, 1, 0, 1], dtype=torch.bool)
-    logits = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    logits = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], dtype=torch.float32)
     expected = torch.where(bool_mask, logits, neginf)
-    bitmask = torch.tensor([0b1010101010], dtype=torch.int32)
 
-    GrammarMatcher.apply_token_bitmask_inplace(logits, bitmask)
-    assert torch.all(logits == expected)
+    logits_gpu = logits.to("cuda")
+    bitmask = torch.tensor([0b1010101010], dtype=torch.int32)
+    GrammarMatcher.apply_token_bitmask_inplace(logits_gpu, bitmask)
+    torch.cuda.synchronize()
+    assert torch.all(logits_gpu == expected.to("cuda"))
+
+
+def test_apply_token_bitmask_inplace_large():
+    batch_size = 64
+    vocab_size = 128000
+    masked_cnt = 64000
+    logits = torch.randn(batch_size, vocab_size, dtype=torch.float32)
+    masked_positions = torch.randint(0, vocab_size, (batch_size, masked_cnt))
+    bool_mask = torch.ones((batch_size, vocab_size), dtype=torch.bool)
+    bool_mask.scatter_(1, masked_positions, False)
+
+    neginf = float("-inf")
+    logits_expected = torch.where(bool_mask, logits, neginf)
+
+    def bool_mask_to_bitmask(bool_mask: torch.Tensor) -> torch.Tensor:
+        bool_mask_int32 = bool_mask.to(torch.int32)
+        bool_mask_view = bool_mask_int32.view(batch_size, -1, 32)
+        weights = torch.tensor([1 << i for i in range(32)], dtype=torch.int64)
+        weights = weights.to(torch.int32)
+        bitmask = (bool_mask_view * weights).sum(dim=2)
+        return bitmask.to(torch.int32)
+
+    bitmask = bool_mask_to_bitmask(bool_mask)
+    logits_gpu = logits.to("cuda")
+    torch.cuda.synchronize()
+    time_start = time.monotonic_ns()
+    GrammarMatcher.apply_token_bitmask_inplace(logits_gpu, bitmask)
+    torch.cuda.synchronize()
+    time_end = time.monotonic_ns()
+    print(f"Time taken: {(time_end - time_start) / 1e3} us")
+    assert torch.all(logits_gpu == logits_expected.to("cuda"))
 
 
 def test_rollback():
@@ -282,20 +316,22 @@ sub_rule ::= "b"
     assert matcher.find_jump_forward_string() == "bb"
 
 
-def test_mask_vocab_size():
+def test_vocab_size():
     vocab = [
         # fmt: off
         "<s>", "</s>", "a", "abc", 'b"', '"', ':"', "{", "}", ", ", "6", ":", "\n", " ", '"a":true',
         # fmt: on
     ]
     tokenizer_info = TokenizerInfo(vocab)
-    matcher = GrammarMatcher(json_grammar, tokenizer_info, mask_vocab_size=64)
-    assert matcher.mask_vocab_size == 64
+    matcher = GrammarMatcher(json_grammar, tokenizer_info, vocab_size=64)
+    assert matcher.vocab_size == 64
 
     mask = matcher.get_next_token_bitmask()
     assert mask.shape == (2,)
 
-    rejected_tokens = GrammarMatcher.get_rejected_tokens_from_bitmask(mask, matcher.mask_vocab_size)
+    rejected_tokens = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+        mask, matcher.vocab_size
+    )
     assert rejected_tokens == [i for i in range(64) if i != 7]
 
 

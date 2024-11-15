@@ -5,6 +5,7 @@ import time
 from typing import List, Optional
 
 import pytest
+import torch
 from transformers import AutoTokenizer
 
 from xgrammar import BNFGrammar, BuiltinGrammar, GrammarMatcher, TokenizerInfo
@@ -285,34 +286,47 @@ def test_get_next_rejected_tokens(
     )
     tokenizer_info = TokenizerInfo.from_huggingface(tokenizer)
     matcher = GrammarMatcher(json_grammar, tokenizer_info)
+    logits_gpu = torch.zeros(matcher.vocab_size, dtype=torch.float32, device="cuda")
     input_bytes = input_str.encode("utf-8")
     rejected_sizes = []
 
     for i, c in enumerate(input_bytes):
+        # 1. get_next_token_bitmask
         time_start = time.monotonic_ns()
         bitmask = matcher.get_next_token_bitmask()
-        time_mid = time.monotonic_ns()
-        rejected_token_ids = GrammarMatcher.get_rejected_tokens_from_bitmask(
-            bitmask, matcher.mask_vocab_size
-        )
         time_end = time.monotonic_ns()
-        print(f"Time to get_next_token_bitmask: {(time_mid - time_start) / 1e3} us")
-        print(f"Time to get_rejected_tokens_from_bitmask: {(time_end - time_mid) / 1e3} us")
+        print(f"Time to get_next_token_bitmask: {(time_end - time_start) / 1e3} us")
+
+        # 2. Correctness verification
+        rejected_token_ids = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+            bitmask, matcher.vocab_size
+        )
         rejected_sizes.append(len(rejected_token_ids))
         if expected_rejected_sizes is not None:
             assert rejected_sizes[-1] == expected_rejected_sizes[i], (
                 rejected_sizes[-1],
                 expected_rejected_sizes[i],
             )
+
+        # 3. apply_token_bitmask_inplace
+        torch.cuda.synchronize()
+        time_start = time.monotonic_ns()
+        GrammarMatcher.apply_token_bitmask_inplace(logits_gpu, bitmask)
+        torch.cuda.synchronize()
+        time_end = time.monotonic_ns()
+        print(f"Time to apply_token_bitmask_inplace: {(time_end - time_start) / 1e3} us")
+
+        # 4. accept_string
         print("Accepting char:", bytes([c]))
         time_start = time.monotonic_ns()
         assert matcher.accept_string(bytes([c]))
         time_end = time.monotonic_ns()
         print(f"Time to accept_token: {(time_end - time_start) / 1e3} us")
 
+    # 5. Final correctness verification
     bitmask = matcher.get_next_token_bitmask()
-    rejected_token_ids = GrammarMatcher.get_rejected_tokens_from_bitmask(
-        bitmask, matcher.mask_vocab_size
+    rejected_token_ids = GrammarMatcher.debug_get_rejected_tokens_from_bitmask(
+        bitmask, matcher.vocab_size
     )
     rejected_sizes.append(len(rejected_token_ids))
     if expected_rejected_sizes is not None:

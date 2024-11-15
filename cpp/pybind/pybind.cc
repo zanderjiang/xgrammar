@@ -67,12 +67,20 @@ PYBIND11_MODULE(xgrammar_bindings, m) {
       .def("accept_token", &GrammarMatcher::AcceptToken)
       .def("accept_string", &GrammarMatcher::AcceptString)
       .def("get_next_token_bitmask", &GrammarMatcher_GetNextTokenBitmask)
-      .def_static("get_rejected_tokens_from_bitmask", &GrammarMatcher_GetRejectedTokensFromBitMask)
+      .def_static(
+          "debug_get_rejected_tokens_from_bitmask",
+          &GrammarMatcher_DebugGetRejectedTokensFromBitmask
+      )
       .def("is_terminated", &GrammarMatcher::IsTerminated)
       .def("reset", &GrammarMatcher::Reset)
       .def("find_jump_forward_string", &GrammarMatcher::FindJumpForwardString)
       .def("rollback", &GrammarMatcher::Rollback)
-      .def_property_readonly("mask_vocab_size", &GrammarMatcher::GetMaskVocabSize)
+      .def_property_readonly("vocab_size", &GrammarMatcher::GetVocabSize)
       .def_property_readonly("max_rollback_tokens", &GrammarMatcher::GetMaxRollbackTokens)
       .def_property_readonly("stop_token_ids", &GrammarMatcher::GetStopTokenIds);
+#ifdef XGRAMMAR_BUILD_KERNELS
+  pyGrammarMatcher.def_static(
+      "apply_token_bitmask_inplace", &GrammarMatcher_ApplyTokenBitmaskInplace
+  );
+#endif
 }

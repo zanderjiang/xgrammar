@@ -1,11 +1,11 @@
 /*!
  *  Copyright (c) 2024 by Contributors
- * \file xgrammar/grammar.h
+ * \file xgrammar/pybind/python_methods.h
  * \brief The header for the support of grammar-guided generation.
  */
 
-#ifndef XGRAMMAR_DEBUG_METHODS_H_
-#define XGRAMMAR_DEBUG_METHODS_H_
+#ifndef XGRAMMAR_PYBIND_PYTHON_METHODS_H_
+#define XGRAMMAR_PYBIND_PYTHON_METHODS_H_
 
 #include <pybind11/pybind11.h>
 #include <torch/extension.h>
@@ -34,10 +34,14 @@ std::vector<pybind11::bytes> TokenizerInfo_GetDecodedVocab(TokenizerInfo& tokeni
 
 torch::Tensor GrammarMatcher_GetNextTokenBitmask(GrammarMatcher& matcher);
 
-std::vector<int> GrammarMatcher_GetRejectedTokensFromBitMask(
-    torch::Tensor token_bitmask, size_t mask_vocab_size
+std::vector<int> GrammarMatcher_DebugGetRejectedTokensFromBitmask(
+    torch::Tensor token_bitmask, size_t vocab_size
 );
+
+#ifdef XGRAMMAR_BUILD_KERNELS
+void GrammarMatcher_ApplyTokenBitmaskInplace(torch::Tensor logits, torch::Tensor token_bitmask);
+#endif
 
 }  // namespace xgrammar
 
-#endif  // XGRAMMAR_DEBUG_METHODS_H_
+#endif  // XGRAMMAR_PYBIND_PYTHON_METHODS_H_

@@ -592,7 +592,7 @@ class GrammarMatcher(XGObject):
         *,
         override_stop_tokens: Union[None, int, List[int]] = None,
         terminate_without_stop_token: bool = False,
-        mask_vocab_size: Optional[int] = None,
+        vocab_size: Optional[int] = None,
         max_rollback_tokens: int = 0,
     ) -> None:
         """Initialize the grammar matcher with a grammar and a tokenizer or vocabulary.
@@ -617,7 +617,7 @@ class GrammarMatcher(XGObject):
             Whether to accept a stop token before terminating. If True, the matcher will directly
             terminate after matching the whole grammar.
 
-        mask_vocab_size : Optional[int], default: None
+        vocab_size : Optional[int], default: None
             The size of the mask. Some LLMs may have a larger model vocabulary size (i.e. the
             dimension of the logits) than the tokenizer vocabulary size (i.e. the number of tokens
             in the vocabulary), as the model vocabulary size may be rounded up to the multiple of
@@ -639,7 +639,7 @@ class GrammarMatcher(XGObject):
         *,
         override_stop_tokens: Union[None, int, List[int]] = None,
         terminate_without_stop_token: bool = False,
-        mask_vocab_size: Optional[int] = None,
+        vocab_size: Optional[int] = None,
         max_rollback_tokens: int = 0,
     ) -> None:
         """Initialize the grammar matcher with a grammar matcher initialization context. This
@@ -659,7 +659,7 @@ class GrammarMatcher(XGObject):
         *,
         override_stop_tokens: Union[None, int, List[int]] = None,
         terminate_without_stop_token: bool = False,
-        mask_vocab_size: Optional[int] = None,
+        vocab_size: Optional[int] = None,
         max_rollback_tokens: int = 0,
     ) -> None:
         if isinstance(grammar_or_context, BNFGrammar):
@@ -675,7 +675,7 @@ class GrammarMatcher(XGObject):
                 compiled_grammar.handle,
                 override_stop_tokens,
                 terminate_without_stop_token,
-                mask_vocab_size,
+                vocab_size,
                 max_rollback_tokens,
             )
         )
@@ -728,13 +728,13 @@ class GrammarMatcher(XGObject):
         -------
         bitmask : torch.Tensor
             The bitmask for the next token prediction. It is a tensor on CPU with dtype torch.int32
-            and shape (ceil(mask_vocab_size / 32),).
+            and shape (ceil(vocab_size / 32),).
         """
         return self.handle.get_next_token_bitmask()
 
     @staticmethod
-    def get_rejected_tokens_from_bitmask(bitmask: torch.Tensor, mask_vocab_size: int) -> List[int]:
-        """Get the ids of the rejected tokens from the bitmask.
+    def debug_get_rejected_tokens_from_bitmask(bitmask: torch.Tensor, vocab_size: int) -> List[int]:
+        """Get the ids of the rejected tokens from the bitmask. Mainly for debug purposes.
 
         Parameters
         ----------
@@ -746,7 +746,7 @@ class GrammarMatcher(XGObject):
         rejected_token_ids : List[int]
             A list of rejected token ids.
         """
-        return _core.GrammarMatcher.get_rejected_tokens_from_bitmask(bitmask, mask_vocab_size)
+        return _core.GrammarMatcher.debug_get_rejected_tokens_from_bitmask(bitmask, vocab_size)
 
     @staticmethod
     def apply_token_bitmask_inplace(logits: torch.Tensor, bitmask: torch.Tensor):
@@ -755,20 +755,21 @@ class GrammarMatcher(XGObject):
         Parameters
         ----------
         logits : torch.Tensor
-            The tensor to apply the bitmask to. This should be a 1D tensor,
-            with the dimension of the vocabulary.
+            The tensor to apply the bitmask to. This should be a 1D float tensor with shape
+            (vocab_size,) or 2D float tensor with shape (batch_size, vocab_size). This tensor should
+            be on GPU.
 
         bitmask : torch.Tensor
-            The bitmask to apply. This should be a 1D tensor of int32 values,
-            where each bit represents whether a token is allowed (1) or not (0).
-
-        Returns
-        -------
-        masked_tensor : torch.Tensor
-            The masked tensor, where disallowed tokens are set to negative infinity.
+            The bitmask to apply. This should be a 1D or 2D tensor with dtype int32 andshape
+            (bitmask_size,) or (batch_size, bitmask_size).
         """
-        rejected_tokens = GrammarMatcher.get_rejected_tokens_from_bitmask(bitmask, logits.shape[-1])
-        logits[rejected_tokens] = float("-inf")
+        if logits.device.type != "cuda":
+            raise ValueError("logits must be on CUDA")
+
+        if bitmask.device != logits.device:
+            bitmask = bitmask.to(logits.device)
+
+        _core.GrammarMatcher.apply_token_bitmask_inplace(logits, bitmask)
 
     def find_jump_forward_string(self) -> str:
         """Find the jump-forward string for jump-forward decoding. This is the longest string that
@@ -823,15 +824,15 @@ class GrammarMatcher(XGObject):
         return self.handle.max_rollback_tokens
 
     @property
-    def mask_vocab_size(self) -> int:
+    def vocab_size(self) -> int:
         """The size of the vocabulary in the generated mask.
 
         Returns
         -------
-        mask_vocab_size : int
+        vocab_size : int
             The size of the vocabulary in the generated mask.
         """
-        return self.handle.mask_vocab_size
+        return self.handle.vocab_size
 
     @property
     def stop_token_ids(self) -> List[int]:
