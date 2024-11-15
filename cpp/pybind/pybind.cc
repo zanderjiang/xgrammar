@@ -45,13 +45,13 @@ PYBIND11_MODULE(xgrammar_bindings, m) {
   auto pyCachedGrammarCompiler = py::class_<CachedGrammarCompiler>(m, "CachedGrammarCompiler");
   pyCachedGrammarCompiler.def(py::init<const TokenizerInfo&>())
       .def(
-          "get_compiled_grammar_for_json",
-          &CachedGrammarCompiler::GetCompiledGrammarForJSON,
+          "compile_json_grammar",
+          &CachedGrammarCompiler::CompileJSONGrammar,
           py::call_guard<py::gil_scoped_release>()
       )
       .def(
-          "get_compiled_grammar_for_json_schema",
-          &CachedGrammarCompiler::GetCompiledGrammarForJSONSchema,
+          "compile_json_schema_grammar",
+          &CachedGrammarCompiler::CompileJSONSchemaGrammar,
           py::call_guard<py::gil_scoped_release>()
       )
       .def("clear", &CachedGrammarCompiler::Clear);
@@ -66,11 +66,8 @@ PYBIND11_MODULE(xgrammar_bindings, m) {
            int>())
       .def("accept_token", &GrammarMatcher::AcceptToken)
       .def("accept_string", &GrammarMatcher::AcceptString)
-      .def("get_next_token_bitmask", &GrammarMatcher_GetNextTokenBitmask)
-      .def_static(
-          "debug_get_rejected_tokens_from_bitmask",
-          &GrammarMatcher_DebugGetRejectedTokensFromBitmask
-      )
+      .def("fill_next_token_bitmask", &GrammarMatcher_FillNextTokenBitmask)
+      .def("debug_get_masked_tokens_from_bitmask", &GrammarMatcher_DebugGetMaskedTokensFromBitmask)
       .def("is_terminated", &GrammarMatcher::IsTerminated)
       .def("reset", &GrammarMatcher::Reset)
       .def("find_jump_forward_string", &GrammarMatcher::FindJumpForwardString)

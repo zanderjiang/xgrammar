@@ -72,7 +72,7 @@ GrammarMatcher GrammarMatcher_Init(
  */
 std::vector<int32_t> GrammarMatcher_GetNextTokenBitmask(GrammarMatcher& matcher) {
   // 1. Initialize std::vector result
-  auto buffer_size = GrammarMatcher::GetBufferSize(matcher.GetVocabSize());
+  auto buffer_size = matcher.GetBitmaskSize();
   std::vector<int32_t> result(buffer_size);
   // 2. Initialize DLTensor with the data pointer of the std vector.
   DLTensor tensor;
@@ -86,7 +86,7 @@ std::vector<int32_t> GrammarMatcher_GetNextTokenBitmask(GrammarMatcher& matcher)
   tensor.strides = &strides[0];
   tensor.byte_offset = 0;
   // 3. Populate tensor, hence result
-  matcher.GetNextTokenBitmask(&tensor);
+  matcher.FillNextTokenBitmask(&tensor);
   return result;
 }
 
@@ -94,7 +94,7 @@ std::vector<int32_t> GrammarMatcher_GetNextTokenBitmask(GrammarMatcher& matcher)
  * \brief Return the list of rejected token IDs based on the bit mask.
  * \note This method is mainly used in testing, so performance is not as important.
  */
-std::vector<int> GrammarMatcher_DebugGetRejectedTokensFromBitmask(
+std::vector<int> GrammarMatcher_DebugGetMaskedTokensFromBitmask(
     std::vector<int32_t> token_bitmask, size_t vocab_size
 ) {
   // 1. Convert token_bitmask into DLTensor
@@ -110,7 +110,7 @@ std::vector<int> GrammarMatcher_DebugGetRejectedTokensFromBitmask(
   tensor.byte_offset = 0;
   // 2. Get rejected token IDs
   std::vector<int> result;
-  GrammarMatcher::DebugGetRejectedTokensFromBitmask(tensor, vocab_size, &result);
+  GrammarMatcher::DebugGetMaskedTokensFromBitmask(tensor, vocab_size, &result);
   return result;
 }
 
@@ -169,7 +169,7 @@ EMSCRIPTEN_BINDINGS(xgrammar) {
       .function("AcceptToken", &GrammarMatcher::AcceptToken)
       .function("GetNextTokenBitmask", &GrammarMatcher_GetNextTokenBitmask)
       .class_function(
-          "DebugGetRejectedTokensFromBitmask", &GrammarMatcher_DebugGetRejectedTokensFromBitmask
+          "DebugGetMaskedTokensFromBitmask", &GrammarMatcher_DebugGetMaskedTokensFromBitmask
       )
       .function("IsTerminated", &GrammarMatcher::IsTerminated)
       .function("Reset", &GrammarMatcher::Reset)
