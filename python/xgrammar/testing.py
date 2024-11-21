@@ -23,7 +23,7 @@ import torch
 from .base import _core
 from .compiler import GrammarCompiler
 from .grammar import Grammar
-from .matcher import GrammarMatcher, get_bitmask_dtype, get_bitmask_shape
+from .matcher import GrammarMatcher, get_bitmask_shape
 from .tokenizer_info import TokenizerInfo
 
 
@@ -108,14 +108,6 @@ def _match_grammar_with_string(
     if not matcher._debug_accept_string(input_str, debug_print=debug_print):
         return False
     return matcher.is_terminated()
-
-
-def _allocate_token_bitmask(batch_size: int, vocab_size: int) -> torch.Tensor:
-    return torch.empty(
-        get_bitmask_shape(batch_size, vocab_size),
-        dtype=get_bitmask_dtype(),
-        pin_memory=True,
-    )
 
 
 def _get_masked_tokens_from_bitmask(
