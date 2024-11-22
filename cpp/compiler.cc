@@ -235,8 +235,16 @@ CompiledGrammar MultiThreadCompileGrammar(
   // 1. All character class or character class star (with last_utf8_bytes=0, 1, 2, 3)
   // 2. All byte strings (with element_in_string=0, 1, 2, ...)
 
-  ThreadPool thread_pool(max_threads);
-  std::mutex adaptive_token_mask_cache_mutex;
+  // TODO(Charlie): Figure out how to support ThreadPool and std::mutex in WebAssembly.
+  // Only declare ThreadPool and mutex if max_threads > 1, so when max_threads = 1, we do
+  // not need ThreadPool or std::mutex, which throws error in runtime in WebAssembly.
+  std::optional<ThreadPool> thread_pool;
+  std::optional<std::mutex> adaptive_token_mask_cache_mutex;
+
+  if (max_threads > 1) {
+    thread_pool.emplace(max_threads);
+    adaptive_token_mask_cache_mutex.emplace();
+  }
 
   auto root_rule_id = grammar->GetRootRuleId();
   for (int32_t rule_id = 0; rule_id < static_cast<int>(grammar->NumRules()); ++rule_id) {
@@ -254,7 +262,9 @@ CompiledGrammar MultiThreadCompileGrammar(
         if (element.type == RuleExprType::kRuleRef) {
           continue;
         }
-        thread_pool.Execute([&, rule_id, sequence_id, element_id, element]() {
+        // Define the per-element processing logic for code reuse between
+        // using thread_pool and not using thread_pool
+        auto process_element = [&, rule_id, sequence_id, element_id, element]() {
           auto add_adaptive_token_mask = [&](const RulePosition& rule_position) {
             auto grammar_matcher = GrammarMatcherForCompiler(grammar, rule_position);
             auto cur_adaptive_token_mask_cache = grammar_matcher.GetAdaptiveTokenMask(
@@ -262,8 +272,11 @@ CompiledGrammar MultiThreadCompileGrammar(
                 tokenizer_info.GetSortedDecodedVocab(),
                 rule_id != root_rule_id
             );
-            {
-              std::lock_guard<std::mutex> lock(adaptive_token_mask_cache_mutex);
+            if (max_threads > 1) {
+              std::lock_guard<std::mutex> lock(adaptive_token_mask_cache_mutex.value());
+              compiled_grammar_impl->adaptive_token_mask_cache[rule_position] =
+                  cur_adaptive_token_mask_cache;
+            } else {
               compiled_grammar_impl->adaptive_token_mask_cache[rule_position] =
                   cur_adaptive_token_mask_cache;
             }
@@ -285,11 +298,19 @@ CompiledGrammar MultiThreadCompileGrammar(
               add_adaptive_token_mask(cur_rule_position);
             }
           }
-        });
+        };
+        // Execute depending on whether we use thread_pool
+        if (max_threads > 1) {
+          thread_pool->Execute([process_element]() { process_element(); });
+        } else {
+          process_element();
+        }
       }
     }
   }
-  thread_pool.Join();
+  if (max_threads > 1) {
+    thread_pool->Join();
+  }
   return CompiledGrammar(compiled_grammar_impl);
 }
 
