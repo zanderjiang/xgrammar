@@ -12,6 +12,15 @@
 
 namespace xgrammar {
 
+/*!
+ * \brief A tag type for empty constructor.
+ *
+ * Since XGRAMMAR_DEFINE_PIMPL_METHODS already occupies the default constructor to
+ * construct a null object, this tag is used to define an empty constructor for
+ * the object.
+ */
+struct EmptyConstructorTag {};
+
 #define XGRAMMAR_DEFINE_PIMPL_METHODS(TypeName)                                \
  public:                                                                       \
   class Impl;                                                                  \
@@ -30,7 +39,7 @@ namespace xgrammar {
   const Impl* operator->() const { return pimpl_.get(); }                      \
                                                                                \
  private:                                                                      \
-  std::shared_ptr<Impl> pimpl_
+  std::shared_ptr<Impl> pimpl_;
 
 }  // namespace xgrammar
 
