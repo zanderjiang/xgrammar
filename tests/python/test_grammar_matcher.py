@@ -1,4 +1,4 @@
-"""This test uses the optimized JSON grammar provided by the grammar library."""
+"""This test tests the token-based operations for the grammar matcher."""
 
 import sys
 from typing import List, Optional
