@@ -1,7 +1,7 @@
 """This module provides classes representing grammars."""
 
 import json
-from typing import Optional, Tuple, Type, Union
+from typing import List, Optional, Tuple, Type, Union
 
 from pydantic import BaseModel
 
@@ -159,3 +159,21 @@ class Grammar(XGRObject):
             The JSON grammar.
         """
         return Grammar._create_from_handle(_core.Grammar.builtin_json_grammar())
+
+    @staticmethod
+    def concat(*grammars: "Grammar") -> "Grammar":
+        """Create a grammar that matches the concatenation of the grammars in the list. That is
+        equivalent to using the `+` operator to concatenate the grammars in the list.
+
+        Parameters
+        ----------
+        grammars : List[Grammar]
+            The grammars to create the concatenation of.
+
+        Returns
+        -------
+        grammar : Grammar
+            The concatenation of the grammars.
+        """
+        grammar_handles = [grammar._handle for grammar in grammars]
+        return Grammar._create_from_handle(_core.Grammar.concat(grammar_handles))
