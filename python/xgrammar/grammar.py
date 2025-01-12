@@ -1,7 +1,7 @@
 """This module provides classes representing grammars."""
 
 import json
-from typing import Optional, Tuple, Type, Union
+from typing import List, Optional, Tuple, Type, Union
 
 from pydantic import BaseModel
 
@@ -42,6 +42,11 @@ class Grammar(XGRObject):
 
         root_rule_name : str, default: "root"
             The name of the root rule in the grammar.
+
+        Raises
+        ------
+        RuntimeError
+            When converting the regex pattern fails, with details about the parsing error.
         """
         return Grammar._create_from_handle(_core.Grammar.from_ebnf(ebnf_string, root_rule_name))
 
@@ -100,6 +105,11 @@ class Grammar(XGRObject):
         -------
         grammar : Grammar
             The constructed grammar.
+
+        Raises
+        ------
+        RuntimeError
+            When converting the json schema fails, with details about the parsing error.
         """
         if isinstance(schema, type) and issubclass(schema, BaseModel):
             if hasattr(schema, "model_json_schema"):
@@ -118,6 +128,27 @@ class Grammar(XGRObject):
         )
 
     @staticmethod
+    def from_regex(regex_string: str) -> "Grammar":
+        """Create a grammar from a regular expression string.
+
+        Parameters
+        ----------
+        regex_string : str
+            The regular expression pattern to create the grammar from.
+
+        Returns
+        -------
+        grammar : Grammar
+            The constructed grammar from the regex pattern.
+
+        Raises
+        ------
+        RuntimeError
+            When parsing the regex pattern fails, with details about the parsing error.
+        """
+        return Grammar._create_from_handle(_core.Grammar.from_regex(regex_string))
+
+    @staticmethod
     def builtin_json_grammar() -> "Grammar":
         """Get the grammar of standard JSON. This is compatible with the official JSON grammar
         specification in https://www.json.org/json-en.html.
@@ -128,3 +159,21 @@ class Grammar(XGRObject):
             The JSON grammar.
         """
         return Grammar._create_from_handle(_core.Grammar.builtin_json_grammar())
+
+    @staticmethod
+    def concat(*grammars: "Grammar") -> "Grammar":
+        """Create a grammar that matches the concatenation of the grammars in the list. That is
+        equivalent to using the `+` operator to concatenate the grammars in the list.
+
+        Parameters
+        ----------
+        grammars : List[Grammar]
+            The grammars to create the concatenation of.
+
+        Returns
+        -------
+        grammar : Grammar
+            The concatenation of the grammars.
+        """
+        grammar_handles = [grammar._handle for grammar in grammars]
+        return Grammar._create_from_handle(_core.Grammar.concat(grammar_handles))

@@ -104,16 +104,31 @@ class Grammar {
   );
 
   /*!
+   * \brief Construct a grammar from a regular expression string.
+   * \param regex The regular expression string.
+   */
+  static Grammar FromRegex(const std::string& regex);
+
+  /*!
    * \brief Get the grammar of standard JSON format. We have built-in support for JSON.
    */
   static Grammar BuiltinJSONGrammar();
 
   /*!
-   * \brief Convert regex string to EBNF grammar string.
-   * \param regex The regex string.
-   * \returns The EBNF grammar string.
+   * \brief Create a grammar that matches any of the grammars in the list. That is equivalent to
+   * using the `|` operator to concatenate the grammars in the list.
+   * \param grammars The grammars to create the union of.
+   * \returns The union of the grammars.
    */
-  //   static std::string _RegexToEBNF(const std::string& regex);
+  static Grammar Union(const std::vector<Grammar>& grammars);
+
+  /*!
+   * \brief Create a grammar that matches the concatenation of the grammars in the list. That is
+   * equivalent to using the `+` operator to concatenate the grammars in the list.
+   * \param grammars The grammars to create the concatenation of.
+   * \returns The concatenation of the grammars.
+   */
+  static Grammar Concat(const std::vector<Grammar>& grammars);
 
   /*! \brief Print a BNF grammar. */
   friend std::ostream& operator<<(std::ostream& os, const Grammar& grammar);

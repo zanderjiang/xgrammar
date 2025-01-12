@@ -37,6 +37,19 @@ class GrammarBuilder {
     int32_t root_rule_id = GetRuleId(root_rule_name);
     XGRAMMAR_CHECK(root_rule_id != -1)
         << "The root rule with name \"" << root_rule_name << "\" is not found.";
+    return Get(root_rule_id);
+  }
+
+  /*!
+   * \brief Get the result grammar. This function will also set the root rule to the rule with
+   * the specified id. The rule should be already added to the grammar.
+   * \param root_rule_id The id of the root rule.
+   */
+  Grammar Get(int32_t root_rule_id) {
+    XGRAMMAR_CHECK(
+        root_rule_id >= 0 && root_rule_id < static_cast<int32_t>(grammar_->rules_.size())
+    ) << "The root rule id "
+      << root_rule_id << " is out of bound.";
     grammar_->root_rule_id_ = root_rule_id;
 
     return Grammar(grammar_);
@@ -135,6 +148,21 @@ class GrammarBuilder {
   int32_t AddChoices(const std::vector<int32_t>& choices) {
     return AddRuleExpr(
         {RuleExprType::kChoices, choices.data(), static_cast<int32_t>(choices.size())}
+    );
+  }
+
+  /*!
+   * \brief Add a RuleExpr for tag dispatch.
+   * \param tag_dispatch_list A list of pairs of tag_expr_id and rule_id.
+   */
+  int32_t AddTagDispatch(const std::vector<std::pair<int32_t, int32_t>>& tag_dispatch_list) {
+    std::vector<int32_t> data;
+    data.reserve(tag_dispatch_list.size() * 2);
+    for (const auto& [tag_expr_id, rule_id] : tag_dispatch_list) {
+      data.push_back(tag_expr_id);
+      data.push_back(rule_id);
+    }
+    return AddRuleExpr({RuleExprType::kTagDispatch, data.data(), static_cast<int32_t>(data.size())}
     );
   }
 

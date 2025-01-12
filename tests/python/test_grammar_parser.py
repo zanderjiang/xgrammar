@@ -75,6 +75,45 @@ d_1_choice ::= (("bcd") | ("pq"))
     assert after == expected
 
 
+def test_repetition_range():
+    before = """root ::= a b c d e f g
+a ::= [a]{1,2}
+b ::= (a | "b"){1, 5}
+c ::= "c" {0 , 2}
+d ::= "d" {0,}
+e ::= "e" {2, }
+f ::= "f" {3}
+g ::= "g" {0}
+"""
+
+    expected = """root ::= ((a b c d e f g))
+a ::= (("a" a_1))
+b ::= ((b_choice b_1))
+c ::= ((c_1))
+d ::= ((d_1))
+e ::= (("ee" e_1))
+f ::= (("fff"))
+g ::= (())
+a_1 ::= ("" | ("a"))
+b_1 ::= ("" | (b_1_choice b_2))
+b_2 ::= ("" | (b_2_choice b_3))
+b_3 ::= ("" | (b_3_choice b_4))
+b_4 ::= ("" | (a) | ("b"))
+c_1 ::= ("" | ("c" c_2))
+c_2 ::= ("" | ("c"))
+d_1 ::= ("" | ("d" d_1))
+e_1 ::= ("" | ("e" e_1))
+b_choice ::= ((a) | ("b"))
+b_1_choice ::= ((a) | ("b"))
+b_2_choice ::= ((a) | ("b"))
+b_3_choice ::= ((a) | ("b"))
+"""
+
+    grammar = xgr.Grammar.from_ebnf(before)
+    after = str(grammar)
+    assert after == expected
+
+
 def test_lookahead_assertion():
     before = """root ::= ((b c d))
 b ::= (("abc" [a-z])) (=("abc"))
@@ -128,6 +167,22 @@ def test_nest():
 """
     expected = """root ::= (("a" root_choice) | ("ef"))
 root_choice ::= (("b") | ("cd"))
+"""
+    grammar = xgr.Grammar.from_ebnf(before)
+    after = str(grammar)
+    assert after == expected
+
+
+def test_tag_dispatch():
+    before = """root ::= TagDispatch(("tag1", rule1), ("tag2", rule2), ("tag3", rule3))
+rule1 ::= "a"
+rule2 ::= "b"
+rule3 ::= "c"
+"""
+    expected = """root ::= TagDispatch(("tag1", rule1), ("tag2", rule2), ("tag3", rule3))
+rule1 ::= (("a"))
+rule2 ::= (("b"))
+rule3 ::= (("c"))
 """
     grammar = xgr.Grammar.from_ebnf(before)
     after = str(grammar)
@@ -229,6 +284,21 @@ d_1 ::= ("" | ("d"))
     assert output_string_1 == output_string_2
 
 
+def test_tag_dispatch_roundtrip():
+    """Checks the printed result can be parsed, and the parsing-printing process is idempotent."""
+    before = r"""root ::= TagDispatch(("tag1", rule1), ("tag2", rule2), ("tag3", rule3))
+rule1 ::= (("a"))
+rule2 ::= (("b"))
+rule3 ::= (("c"))
+"""
+    grammar_1 = xgr.Grammar.from_ebnf(before)
+    output_string_1 = str(grammar_1)
+    grammar_2 = xgr.Grammar.from_ebnf(output_string_1)
+    output_string_2 = str(grammar_2)
+    assert before == output_string_1
+    assert output_string_1 == output_string_2
+
+
 def test_error():
     with pytest.raises(
         RuntimeError,
@@ -294,6 +364,54 @@ def test_error():
         match="EBNF parse error at line 1, column 21: Unexpected lookahead assertion",
     ):
         xgr.Grammar.from_ebnf('root ::= "a" (="a") (="b")')
+
+
+def test_error_tag_dispatch():
+    # Test empty tag
+    with pytest.raises(RuntimeError):
+        xgr.Grammar.from_ebnf(
+            """root ::= TagDispatch(("", rule1))
+rule1 ::= "a"
+"""
+        )
+
+    # Test undefined rule
+    with pytest.raises(RuntimeError):
+        xgr.Grammar.from_ebnf(
+            """root ::= TagDispatch(("tag1", undefined_rule))
+"""
+        )
+
+    # Test using root rule as tag target
+    with pytest.raises(RuntimeError):
+        xgr.Grammar.from_ebnf(
+            """root ::= TagDispatch(("tag1", root))
+"""
+        )
+
+    # Test invalid TagDispatch syntax
+    with pytest.raises(RuntimeError):
+        xgr.Grammar.from_ebnf(
+            """root ::= TagDispatch("tag1", rule1)
+rule1 ::= "a"
+"""
+        )
+
+    with pytest.raises(RuntimeError):
+        xgr.Grammar.from_ebnf(
+            """root ::= TagDispatch(("tag1" rule1))
+rule1 ::= "a"
+"""
+        )
+
+    # Test TagDispatch in non-root rule
+    with pytest.raises(RuntimeError):
+        xgr.Grammar.from_ebnf(
+            """root ::= rule1
+rule1 ::= TagDispatch(("tag1", rule2))
+rule2 ::= "a"
+"""
+        )
 
 
 if __name__ == "__main__":
