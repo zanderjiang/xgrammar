@@ -9,13 +9,14 @@
 #include <unordered_map>
 
 #include "picojson.h"
+#include "support/logging.h"
 
 namespace xgrammar {
 
 /******************* Parser *******************/
 
 std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> parse_message(
-    const std::string& input, bool ignore_error = false
+    const std::string& input, bool ignore_error
 ) {
   std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> tool_calls;
   size_t input_pos = 0;
