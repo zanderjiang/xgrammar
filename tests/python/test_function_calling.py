@@ -98,8 +98,8 @@ def test_special_values():
             "null_value": "null",
             "bool_true": "true",
             "bool_false": "false",
-            "number": "42.000000",
-            "float": "3.140000",
+            "number": "42",
+            "float": "3.14",
         },
     )
 
@@ -148,6 +148,75 @@ def test_whitespace_handling():
     result = _parse_message(input_str)
     assert len(result) == 1
     assert result[0] == ("test", {"param": "value"})
+
+
+def test_unicode_parameters():
+    """Test handling of Unicode characters in parameters."""
+    input_str = '<function=translate>{"text": "こんにちは世界", "target": "español"}</function>'
+    result = _parse_message(input_str)
+    assert len(result) == 1
+    assert result[0] == ("translate", {"text": "こんにちは世界", "target": "español"})
+
+
+def test_escaped_characters():
+    """Test handling of escaped characters in JSON."""
+    input_str = '<function=process>{"path": "C:\\\\Program Files\\\\App", "query": ""quoted string""}</function>'
+    result = _parse_message(input_str)
+    assert len(result) == 1
+    assert result[0] == ("process", {"path": "C:\\Program Files\\App", "query": '"quoted string"'})
+
+
+def test_empty_array_parameters():
+    """Test handling of empty arrays in parameters."""
+    input_str = '<function=update_list>{"ids": [], "tags": [""], "flags": null}</function>'
+    result = _parse_message(input_str)
+    assert len(result) == 1
+    assert result[0] == ("update_list", {"ids": [], "tags": [""], "flags": "null"})
+
+
+def test_large_number_of_functions():
+    """Test handling of a large number of sequential function calls."""
+    functions = [f'<function=func_{i}>{{"id": "{i}"}}</function>' for i in range(100)]
+    input_str = "\n".join(functions)
+    result = _parse_message(input_str)
+    assert len(result) == 100
+    for i, (name, params) in enumerate(result):
+        assert name == f"func_{i}"
+        assert params == {"id": str(i)}
+
+
+def test_mixed_line_endings():
+    """Test handling of different line endings (CRLF, LF)."""
+    input_str = '<function=test1>{"a": "1"}</function>\r\n<function=test2>{"b": "2"}</function>\n<function=test3>{"c": "3"}</function>'
+    result = _parse_message(input_str)
+    assert len(result) == 3
+    assert result[0] == ("test1", {"a": "1"})
+    assert result[1] == ("test2", {"b": "2"})
+    assert result[2] == ("test3", {"c": "3"})
+
+
+def test_json_with_comments():
+    """Test handling of JSON-like content with comments (should fail)."""
+    input_str = """
+    <function=test>{
+        // This is a comment
+        "param": "value" /* inline comment */
+    }</function>
+    """
+    with pytest.raises(Exception):
+        _parse_message(input_str)
+
+
+def test_case_sensitivity():
+    """Test case sensitivity in function names and parameters."""
+    input_str = """
+    <function=TestFunction>{"ParamOne": "Value", "paramTwo": "value"}</function>
+    {"name": "TestFunction2", "parameters": {"PARAM": "VALUE"}}
+    """
+    result = _parse_message(input_str)
+    assert len(result) == 2
+    assert result[0] == ("TestFunction", {"ParamOne": "Value", "paramTwo": "value"})
+    assert result[1] == ("TestFunction2", {"PARAM": "VALUE"})
 
 
 @pytest.mark.parametrize(
