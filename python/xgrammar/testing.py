@@ -204,7 +204,7 @@ def _get_grammar_union(*grammars: "Grammar") -> "Grammar":
     return Grammar._create_from_handle(_core.Grammar.union(grammar_handles))
 
 
-def _parse_message(input: str, *, ignore_error: bool = False) -> List[Tuple[str, Dict[str, str]]]:
+def _parse_function_call(input: str, *, ignore_error: bool = False) -> List[Tuple[str, Dict[str, str]]]:
     """Parse function calls from a message in either tag-based or JSON format.
 
     Parameters
@@ -236,11 +236,11 @@ def _parse_message(input: str, *, ignore_error: bool = False) -> List[Tuple[str,
     Examples
     --------
     >>> msg = '<function=get_weather>{"location": "SF"}</function>'
-    >>> parse_message(msg)
+    >>> parse_function_call(msg)
     [('get_weather', {'location': 'SF'})]
 
     >>> msg = '{"name": "get_time", "parameters": {"zone": "PST"}}'
-    >>> parse_message(msg)
+    >>> parse_function_call(msg)
     [('get_time', {'zone': 'PST'})]
     """
-    return _core.testing._parse_message(input, ignore_error)
+    return _core.testing._parse_function_call(input, ignore_error)

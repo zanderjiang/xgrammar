@@ -59,7 +59,7 @@ std::string json_to_str(const picojson::value& v) {
   return "";
 }
 
-std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> parse_message(
+std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> parse_function_call(
     const std::string& input, bool ignore_error
 ) {
   std::vector<std::pair<std::string, std::unordered_map<std::string, std::string>>> tool_calls;
