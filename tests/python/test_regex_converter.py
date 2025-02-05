@@ -128,6 +128,24 @@ def test_quantifier():
     assert _is_grammar_accept_string(grammar_str, instance1)
 
 
+def test_consecutive_quantifiers():
+    regex = "a{1,3}?{1,3}"
+    with pytest.raises(RuntimeError, match="Two consecutive repetition modifiers are not allowed."):
+        _regex_to_ebnf(regex)
+
+    regex = "a???"
+    with pytest.raises(RuntimeError, match="Two consecutive repetition modifiers are not allowed."):
+        _regex_to_ebnf(regex)
+
+    regex = "a++"
+    with pytest.raises(RuntimeError, match="Two consecutive repetition modifiers are not allowed."):
+        _regex_to_ebnf(regex)
+
+    regex = "a+?{1,3}"
+    with pytest.raises(RuntimeError, match="Two consecutive repetition modifiers are not allowed."):
+        _regex_to_ebnf(regex)
+
+
 def test_group():
     regex = r"(a|b)(c|d)"
     instance = "ac"
@@ -307,7 +325,30 @@ def test_unmatched_parentheses():
     with pytest.raises(RuntimeError, match="Unmatched '\\)'"):
         _regex_to_ebnf(regex)
 
-    # Test empty alternative with closing parenthesis
+    regex = "abc((a)"
+    with pytest.raises(RuntimeError, match="The parenthesis is not closed."):
+        _regex_to_ebnf(regex)
+
+
+def test_empty_parentheses():
+    regex = "()"
+    grammar_str = _regex_to_ebnf(regex)
+    print(grammar_str)
+    expected_grammar = r"""root ::= ( )
+"""
+    assert grammar_str == expected_grammar
+    assert _is_grammar_accept_string(grammar_str, "")
+
+    regex = "a()b"
+    grammar_str = _regex_to_ebnf(regex)
+    print(grammar_str)
+    expected_grammar = r"""root ::= "a" ( ) "b"
+"""
+    assert grammar_str == expected_grammar
+    assert _is_grammar_accept_string(grammar_str, "ab")
+
+
+def test_empty_alternative():
     regex = "(a|)"
     grammar_str = _regex_to_ebnf(regex)
     expected_grammar = r"""root ::= ( "a" | "" )
@@ -317,7 +358,7 @@ def test_unmatched_parentheses():
     assert _is_grammar_accept_string(grammar_str, "")
     assert not _is_grammar_accept_string(grammar_str, "b")
 
-    # Test unmatched opening parenthesis
+    # Nested case
     regex = "ab(c|)"
     grammar_str = _regex_to_ebnf(regex)
     print(grammar_str)
@@ -327,6 +368,47 @@ def test_unmatched_parentheses():
     assert _is_grammar_accept_string(grammar_str, "abc")
     assert _is_grammar_accept_string(grammar_str, "ab")
     assert not _is_grammar_accept_string(grammar_str, "abd")
+
+
+def test_non_greedy_quantifier():
+    regex = "a{1,3}?"
+    grammar_str = _regex_to_ebnf(regex)
+    expected_grammar = r"""root ::= "a"{1,3}
+"""
+    assert grammar_str == expected_grammar
+    assert _is_grammar_accept_string(grammar_str, "a")
+    assert _is_grammar_accept_string(grammar_str, "aa")
+    assert _is_grammar_accept_string(grammar_str, "aaa")
+    assert not _is_grammar_accept_string(grammar_str, "aaaa")
+
+    regex = "a+?"
+    grammar_str = _regex_to_ebnf(regex)
+    expected_grammar = r"""root ::= "a"+
+"""
+    assert grammar_str == expected_grammar
+    assert _is_grammar_accept_string(grammar_str, "a")
+    assert _is_grammar_accept_string(grammar_str, "aa")
+    assert _is_grammar_accept_string(grammar_str, "aaa")
+    assert not _is_grammar_accept_string(grammar_str, "")
+
+    regex = "a*?"
+    grammar_str = _regex_to_ebnf(regex)
+    expected_grammar = r"""root ::= "a"*
+"""
+    assert grammar_str == expected_grammar
+    assert _is_grammar_accept_string(grammar_str, "a")
+    assert _is_grammar_accept_string(grammar_str, "aa")
+    assert _is_grammar_accept_string(grammar_str, "aaa")
+    assert _is_grammar_accept_string(grammar_str, "")
+
+    regex = "a??"
+    grammar_str = _regex_to_ebnf(regex)
+    expected_grammar = r"""root ::= "a"?
+"""
+    assert grammar_str == expected_grammar
+    assert _is_grammar_accept_string(grammar_str, "a")
+    assert _is_grammar_accept_string(grammar_str, "")
+    assert not _is_grammar_accept_string(grammar_str, "aa")
 
 
 tokenizer_paths = ["meta-llama/Llama-2-7b-chat-hf", "meta-llama/Meta-Llama-3-8B-Instruct"]
