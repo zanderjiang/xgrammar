@@ -95,12 +95,19 @@ def apply_token_bitmask_inplace(
                 if get_bitmask_value(bitmask, batch_id, j) == 0:
                     logits[batch_id, j] = -inf
 
+    When indices is specified, the batch sizes of logits and bitmask do not need to be the same.
+    As long as the indices are valid, the operation will be performed.
+
     The logits and bitmask should be on the same device. If both them are on CUDA, we launch a CUDA
     kernel to apply bitmask. If both them are on CPU, we use a CPU implementation. The CUDA kernel
     is optimized and should be preferred.
 
     In practice, the bitmask is allocated on CPU, and the logits is usually on GPU, so users should
     manually copy the bitmask to GPU before calling this function.
+
+    This method also supports additional padding on the vocabulary dimension of the logits. The
+    shape of logits can be (batch_size, vocab_size + padding). Then the vocab size will be
+    determined by the bitmask size.
 
     Parameters
     ----------
@@ -111,9 +118,10 @@ def apply_token_bitmask_inplace(
         The bitmask to apply.
 
     indices : Optional[List[int]], default: None
-        A list of indices to specify which logits in the batch to apply the bitmask to. If None,
-        apply the bitmask to all logits in the batch.
+        A list of indices to specify which logits in the batch to apply the bitmask to. Should be
+        unique. If None, apply the bitmask to all logits in the batch.
     """
+    # dispatch to different implementations based on the device of logits and bitmask
     if bitmask.device != logits.device:
         raise ValueError(
             "logits and bitmask should be on the same device. "
