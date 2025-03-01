@@ -1,6 +1,5 @@
 """Compiling grammar for efficient token mask generation."""
 
-import json
 from typing import List, Optional, Tuple, Type, Union, overload
 
 from pydantic import BaseModel
@@ -52,11 +51,7 @@ class GrammarCompiler(XGRObject):
     """
 
     def __init__(
-        self,
-        tokenizer_info: TokenizerInfo,
-        *,
-        max_threads: int = 8,
-        cache_enabled: bool = True,
+        self, tokenizer_info: TokenizerInfo, *, max_threads: int = 8, cache_enabled: bool = True
     ):
         if not isinstance(tokenizer_info, TokenizerInfo):
             raise ValueError(
@@ -152,7 +147,7 @@ class GrammarCompiler(XGRObject):
         compiled_grammar : CompiledGrammar
             The compiled grammar.
         """
-        tags_tuple = [(tag.start, _handle_pydantic_schema(tag.schema_), tag.end) for tag in tags]
+        tags_tuple = [(tag.begin, _handle_pydantic_schema(tag.schema_), tag.end) for tag in tags]
         return CompiledGrammar._create_from_handle(
             self._handle.compile_structural_tag(tags_tuple, triggers)
         )

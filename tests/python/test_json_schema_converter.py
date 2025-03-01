@@ -7,11 +7,7 @@ import pytest
 from pydantic import BaseModel, Field, TypeAdapter, WithJsonSchema, create_model
 
 import xgrammar as xgr
-from xgrammar.testing import (
-    _generate_range_regex,
-    _is_grammar_accept_string,
-    _json_schema_to_ebnf,
-)
+from xgrammar.testing import _generate_range_regex, _is_grammar_accept_string, _json_schema_to_ebnf
 
 
 def check_schema_with_grammar(
@@ -184,7 +180,8 @@ basic_array ::= ("[" "" basic_any (", " basic_any)* "" "]") | "[" "]"
 basic_object ::= ("{" "" basic_string ": " basic_any (", " basic_string ": " basic_any)* "" "}") | "{" "}"
 root_prop_0_item_1 ::= "[" "\n      " basic_integer ",\n      " basic_integer (",\n      " basic_any)* "\n    " "]"
 root_prop_0 ::= "[" "\n    " basic_string ",\n    " root_prop_0_item_1 (",\n    " basic_any)* "\n  " "]"
-root_prop_1 ::= ("{" "\n    " basic_string ": " basic_any (",\n    " basic_string ": " basic_any)* "\n  " "}") | "{" "}"
+defs_Foo ::= ("{" "\n    " basic_string ": " basic_any (",\n    " basic_string ": " basic_any)* "\n  " "}") | "{" "}"
+root_prop_1 ::= defs_Foo
 root_prop_2 ::= ("[" "\n    " basic_string (",\n    " basic_string)* "\n  " "]") | "[" "]"
 root ::= "{" "\n  " "\"tuple_field\"" ": " root_prop_0 ",\n  " "\"foo_field\"" ": " root_prop_1 ",\n  " "\"list_field\"" ": " root_prop_2 ",\n  " "\"object_field\"" ": " basic_object (",\n  " basic_string ": " basic_any)* "\n" "}"
 """
@@ -242,7 +239,8 @@ root_prop_0 ::= "\"a\""
 root_prop_1 ::= "\"a\\n\\r\\\"\""
 root_prop_2 ::= ("\"a\"") | ("\"b\"") | ("\"c\"")
 root_prop_3 ::= ("1") | ("\"a\"") | ("true")
-root_prop_4 ::= ("\"foo\"") | ("\"bar\"")
+defs_Field ::= ("\"foo\"") | ("\"bar\"")
+root_prop_4 ::= defs_Field
 root ::= "{" "" "\"bars\"" ": " root_prop_0 ", " "\"str_values\"" ": " root_prop_1 ", " "\"foo\"" ": " root_prop_2 ", " "\"values\"" ": " root_prop_3 ", " "\"field\"" ": " root_prop_4 "" "}"
 """
 
@@ -386,8 +384,7 @@ def test_reference():
         bars: List[Bar]
 
     instance = MainModel(
-        foo=Foo(count=42, size=3.14),
-        bars=[Bar(apple="a", banana="b"), Bar(apple="c", banana="d")],
+        foo=Foo(count=42, size=3.14), bars=[Bar(apple="a", banana="b"), Bar(apple="c", banana="d")]
     )
 
     ebnf_grammar = r"""basic_escape ::= ["\\/bfnrt] | "u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9]
@@ -400,10 +397,12 @@ basic_boolean ::= "true" | "false"
 basic_null ::= "null"
 basic_array ::= "[" "" basic_any (", " basic_any)* "" "]"
 basic_object ::= "{" "" basic_string ": " basic_any (", " basic_string ": " basic_any)* "" "}"
-root_prop_0_prop_1 ::= basic_number | basic_null
-root_prop_0 ::= "{" "" "\"count\"" ": " basic_integer (", " "\"size\"" ": " root_prop_0_prop_1)? "" "}"
-root_prop_1_items_part_0 ::= "" | ", " "\"banana\"" ": " basic_string ""
-root_prop_1_items ::= "{" "" (("\"apple\"" ": " basic_string root_prop_1_items_part_0) | ("\"banana\"" ": " basic_string "")) "" "}"
+defs_Foo_prop_1 ::= basic_number | basic_null
+defs_Foo ::= "{" "" "\"count\"" ": " basic_integer (", " "\"size\"" ": " defs_Foo_prop_1)? "" "}"
+root_prop_0 ::= defs_Foo
+defs_Bar_part_0 ::= "" | ", " "\"banana\"" ": " basic_string ""
+defs_Bar ::= "{" "" (("\"apple\"" ": " basic_string defs_Bar_part_0) | ("\"banana\"" ": " basic_string "")) "" "}"
+root_prop_1_items ::= defs_Bar
 root_prop_1 ::= "[" "" root_prop_1_items (", " root_prop_1_items)* "" "]"
 root ::= "{" "" "\"foo\"" ": " root_prop_0 ", " "\"bars\"" ": " root_prop_1 "" "}"
 """
@@ -492,9 +491,7 @@ def test_reference_schema():
             },
             "node_b": {
                 "type": "object",
-                "properties": {
-                    "id": {"type": "integer"},
-                },
+                "properties": {"id": {"type": "integer"}},
                 "required": ["id"],
             },
         },
@@ -506,6 +503,104 @@ def test_reference_schema():
     check_schema_with_instance(schema_nested, instance_nested, any_whitespace=False)
     check_schema_with_instance(
         schema_nested, instance_nested_rejected, is_accepted=False, any_whitespace=False
+    )
+
+    # Test schema with self-recursion through $defs
+    schema_self_recursive = {
+        "type": "object",
+        "properties": {"value": {"$ref": "#/$defs/node"}},
+        "required": ["value"],
+        "$defs": {
+            "node": {
+                "type": "object",
+                "properties": {"id": {"type": "integer"}, "next": {"$ref": "#/$defs/node"}},
+                "required": ["id"],
+            }
+        },
+    }
+
+    instance_self_recursive = {"value": {"id": 1, "next": {"id": 2, "next": {"id": 3}}}}
+    instance_self_recursive_1 = {"value": {"id": 1}}
+    instance_self_recursive_rejected = {"value": {"id": 1, "next": {"next": {"id": 3}}}}
+
+    check_schema_with_instance(schema_self_recursive, instance_self_recursive, any_whitespace=False)
+    check_schema_with_instance(
+        schema_self_recursive, instance_self_recursive_1, any_whitespace=False
+    )
+    check_schema_with_instance(
+        schema_self_recursive,
+        instance_self_recursive_rejected,
+        is_accepted=False,
+        any_whitespace=False,
+    )
+
+    # Test schema with circular references between multiple schemas
+    schema_circular = {
+        "type": "object",
+        "properties": {"value": {"$ref": "#/$defs/schema_a"}},
+        "required": ["value"],
+        "$defs": {
+            "schema_a": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}, "next": {"$ref": "#/$defs/schema_b"}},
+                "required": ["name", "next"],
+            },
+            "schema_b": {
+                "type": "object",
+                "properties": {"id": {"type": "integer"}, "child": {"$ref": "#/$defs/schema_a"}},
+                "required": ["id"],
+            },
+        },
+    }
+
+    instance_circular = {
+        "value": {
+            "name": "first",
+            "next": {"id": 1, "child": {"name": "second", "next": {"id": 2}}},
+        }
+    }
+    instance_circular_complex = {
+        # fmt: off
+        "value": {"name": "root", "next": {
+            "id": 1, "child": {"name": "level1", "next": {
+                "id": 2, "child": {"name": "level2", "next": {
+                    "id": 3, "child": {"name": "level3", "next": {
+                        "id": 4, "child": {"name": "level4", "next": {"id": 5}}
+                    }}
+                }}
+            }}
+        }}
+        # fmt: on
+    }
+    instance_circular_rejected = {
+        "value": {"name": "first", "next": {"child": {"name": "second", "next": {"id": 2}}}}
+    }
+
+    check_schema_with_instance(schema_circular, instance_circular, any_whitespace=False)
+    check_schema_with_instance(schema_circular, instance_circular_complex, any_whitespace=False)
+    check_schema_with_instance(
+        schema_circular, instance_circular_rejected, is_accepted=False, any_whitespace=False
+    )
+
+    # Test self-referential schema
+    schema_recursive = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "children": {"type": "array", "items": {"$ref": "#"}},
+        },
+        "required": ["name"],
+    }
+
+    instance_recursive = {
+        "name": "root",
+        "children": [{"name": "child1", "children": [{"name": "grandchild1"}]}, {"name": "child2"}],
+    }
+    instance_recursive_rejected = {"children": [{"name": "child1"}]}
+
+    check_schema_with_instance(schema_recursive, instance_recursive, any_whitespace=False)
+    check_schema_with_instance(
+        schema_recursive, instance_recursive_rejected, is_accepted=False, any_whitespace=False
     )
 
 
@@ -532,8 +627,10 @@ basic_boolean ::= "true" | "false"
 basic_null ::= "null"
 basic_array ::= "[" "" basic_any (", " basic_any)* "" "]"
 basic_object ::= "{" "" basic_string ": " basic_any (", " basic_string ": " basic_any)* "" "}"
-root_case_0 ::= "{" "" "\"name\"" ": " basic_string ", " "\"color\"" ": " basic_string "" "}"
-root_case_1 ::= "{" "" "\"name\"" ": " basic_string ", " "\"breed\"" ": " basic_string "" "}"
+defs_Cat ::= "{" "" "\"name\"" ": " basic_string ", " "\"color\"" ": " basic_string "" "}"
+root_case_0 ::= defs_Cat
+defs_Dog ::= "{" "" "\"name\"" ": " basic_string ", " "\"breed\"" ": " basic_string "" "}"
+root_case_1 ::= defs_Dog
 root ::= root_case_0 | root_case_1
 """
 
@@ -551,14 +648,7 @@ root ::= root_case_0 | root_case_1
 def test_anyof_oneof():
     schema = {
         "type": "object",
-        "properties": {
-            "name": {
-                "anyOf": [
-                    {"type": "string"},
-                    {"type": "integer"},
-                ],
-            },
-        },
+        "properties": {"name": {"anyOf": [{"type": "string"}, {"type": "integer"}]}},
     }
     schema_accepted_1 = '{"name": "John"}'
     schema_accepted_2 = '{"name": 123}'
@@ -569,14 +659,7 @@ def test_anyof_oneof():
 
     schema = {
         "type": "object",
-        "properties": {
-            "name": {
-                "oneOf": [
-                    {"type": "string"},
-                    {"type": "integer"},
-                ],
-            },
-        },
+        "properties": {"name": {"oneOf": [{"type": "string"}, {"type": "integer"}]}},
     }
 
     schema_accepted_1 = '{"name": "John"}'
@@ -641,7 +724,7 @@ root ::= "{" "" "\"name 1\"" ": " root_prop_0 "" "}"
 
     instance_space = MainModelSpace(**{"name 1": "abc"})
     instance_space_str = json.dumps(
-        instance_space.model_dump(mode="json", round_trip=True, by_alias=True),
+        instance_space.model_dump(mode="json", round_trip=True, by_alias=True)
     )
     check_schema_with_instance(
         MainModelSpace.model_json_schema(by_alias=True), instance_space_str, any_whitespace=False
@@ -679,10 +762,7 @@ def test_complex_restrictions():
     instance_err = RestrictedModel(restricted_string='"', restricted_value=42)
     instance_str = json.dumps(instance_err.model_dump(mode="json"))
     check_schema_with_instance(
-        RestrictedModel.model_json_schema(),
-        instance_str,
-        is_accepted=False,
-        any_whitespace=False,
+        RestrictedModel.model_json_schema(), instance_str, is_accepted=False, any_whitespace=False
     )
 
     check_schema_with_instance(
@@ -771,12 +851,9 @@ def test_array_with_only_items_keyword():
     schema = {
         "items": {
             "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "age": {"type": "integer"},
-            },
+            "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
             "required": ["name", "age"],
-        },
+        }
     }
     instance_accepted = [{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]
     instance_rejected = [{"name": "John"}]
@@ -787,21 +864,15 @@ def test_array_with_only_items_keyword():
         "prefixItems": [
             {
                 "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "age": {"type": "integer"},
-                },
+                "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
                 "required": ["name", "age"],
             },
             {
                 "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "age": {"type": "integer"},
-                },
+                "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
                 "required": ["name", "age"],
             },
-        ],
+        ]
     }
 
     check_schema_with_instance(schema_prefix_items, instance_accepted, any_whitespace=False)
@@ -812,12 +883,9 @@ def test_array_with_only_items_keyword():
     schema_unevaluated_items = {
         "unevaluatedItems": {
             "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "age": {"type": "integer"},
-            },
+            "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
             "required": ["name", "age"],
-        },
+        }
     }
 
     check_schema_with_instance(schema_unevaluated_items, instance_accepted, any_whitespace=False)
@@ -828,10 +896,7 @@ def test_array_with_only_items_keyword():
 
 def test_object_with_only_properties_keyword():
     schema = {
-        "properties": {
-            "name": {"type": "string"},
-            "age": {"type": "integer"},
-        },
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
         "required": ["name", "age"],
     }
     instance_accepted = {"name": "John", "age": 30}
@@ -839,11 +904,7 @@ def test_object_with_only_properties_keyword():
     check_schema_with_instance(schema, instance_accepted, any_whitespace=False)
     check_schema_with_instance(schema, instance_rejected, is_accepted=False, any_whitespace=False)
 
-    schema_additional_properties = {
-        "additionalProperties": {
-            "type": "string",
-        },
-    }
+    schema_additional_properties = {"additionalProperties": {"type": "string"}}
     instance_accepted = {"name": "John"}
     instance_rejected = {"name": "John", "age": 30}
 
@@ -854,11 +915,7 @@ def test_object_with_only_properties_keyword():
         schema_additional_properties, instance_rejected, is_accepted=False, any_whitespace=False
     )
 
-    schema_unevaluated_properties = {
-        "unevaluatedProperties": {
-            "type": "string",
-        },
-    }
+    schema_unevaluated_properties = {"unevaluatedProperties": {"type": "string"}}
 
     check_schema_with_instance(
         schema_unevaluated_properties, instance_accepted, any_whitespace=False

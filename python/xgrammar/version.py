@@ -20,7 +20,7 @@ import subprocess
 
 # ---------------------------------------------------
 
-__version__ = "0.1.13"
+__version__ = "0.1.14"
 PROJ_ROOT = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 
 
@@ -67,10 +67,7 @@ def git_describe_version():
         "v[0-9]*.[0-9]*.dev[0-9]*",
     ]
     with subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        cwd=PROJ_ROOT,
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=PROJ_ROOT
     ) as proc:
         (out, _) = proc.communicate()
 

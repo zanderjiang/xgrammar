@@ -13,8 +13,8 @@ class StructuralTagItem(BaseModel):
 
     Attributes
     ----------
-    start : str
-        The start tag.
+    begin : str
+        The begin tag.
 
     schema_ : Union[str, Type[BaseModel]]
         The schema.
@@ -23,7 +23,7 @@ class StructuralTagItem(BaseModel):
         The end tag.
     """
 
-    start: str
+    begin: str
     schema_: Union[str, Type[BaseModel]] = Field(alias="schema")
     end: str
 
@@ -31,10 +31,8 @@ class StructuralTagItem(BaseModel):
 def _handle_pydantic_schema(schema: Union[str, Type[BaseModel]]) -> str:
     if isinstance(schema, type) and issubclass(schema, BaseModel):
         if hasattr(schema, "model_json_schema"):
-            # pydantic 2.x
             return json.dumps(schema.model_json_schema())
-        elif hasattr(schema, "schema_json"):
-            # pydantic 1.x
+        if hasattr(schema, "schema_json"):
             return json.dumps(schema.schema_json())
         else:
             raise ValueError("The schema should have a model_json_schema or json_schema method.")
@@ -151,7 +149,7 @@ class Grammar(XGRObject):
         return Grammar._create_from_handle(
             _core.Grammar.from_json_schema(
                 schema_str, any_whitespace, indent, separators, strict_mode
-            ),
+            )
         )
 
     @staticmethod
@@ -192,14 +190,14 @@ class Grammar(XGRObject):
         The tags parameter is used to specify the output pattern. It is especially useful for LLM
         function calling, where the pattern is:
         <function=func_name>{"arg1": ..., "arg2": ...}</function>.
-        This pattern consists of three parts: a start tag (<function=func_name>), a parameter list
+        This pattern consists of three parts: a begin tag (<function=func_name>), a parameter list
         according to some schema ({"arg1": ..., "arg2": ...}), and an end tag (</function>). This
-        pattern can be described in a StructuralTagItem with a start tag, a schema, and an end tag.
+        pattern can be described in a StructuralTagItem with a begin tag, a schema, and an end tag.
         The structural tag is able to handle multiple such patterns by passing them into multiple
         tags.
 
         The triggers parameter is used to trigger the dispatching of different grammars. The trigger
-        should be a prefix of a provided start tag. When the trigger is encountered, the
+        should be a prefix of a provided begin tag. When the trigger is encountered, the
         corresponding tag should be used to constrain the following output. There can be multiple
         tags matching the same trigger. Then if the trigger is encountered, the following output
         should match one of the tags. For example, in function calling, the triggers can be
@@ -237,13 +235,13 @@ class Grammar(XGRObject):
         >>>     arg3: float
         >>>     arg4: List[str]
         >>> tags = [
-        >>>     StructuralTagItem(start="<function=f>", schema=Schema1, end="</function>"),
-        >>>     StructuralTagItem(start="<function=g>", schema=Schema2, end="</function>"),
+        >>>     StructuralTagItem(begin="<function=f>", schema=Schema1, end="</function>"),
+        >>>     StructuralTagItem(begin="<function=g>", schema=Schema2, end="</function>"),
         >>> ]
         >>> triggers = ["<function="]
         >>> grammar = Grammar.from_structural_tag(tags, triggers)
         """
-        tags_tuple = [(tag.start, _handle_pydantic_schema(tag.schema_), tag.end) for tag in tags]
+        tags_tuple = [(tag.begin, _handle_pydantic_schema(tag.schema_), tag.end) for tag in tags]
         return Grammar._create_from_handle(_core.Grammar.from_structural_tag(tags_tuple, triggers))
 
     @staticmethod
