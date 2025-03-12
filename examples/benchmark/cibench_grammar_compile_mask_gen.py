@@ -421,11 +421,6 @@ if __name__ == "__main__":
     print(f"Iterations: {num_iters}")
     print(f"Warmup Iterations: {num_warmup}")
 
-    # Format results for easy parsing in CI
-    print("\n===== RESULTS_JSON_START =====")
-    print(json.dumps(results, indent=2))
-    print("===== RESULTS_JSON_END =====\n")
-
     for result in results:
         print(f"\nDataset: {result['dataset']}")
         print(
