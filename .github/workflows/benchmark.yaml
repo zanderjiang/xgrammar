@@ -9,7 +9,7 @@ on:
 jobs:
   run_benchmark:
     name: Run XGrammar Benchmark
-    runs-on: [self-hosted, linux, gpu]
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
