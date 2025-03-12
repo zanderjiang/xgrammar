@@ -304,10 +304,6 @@ def run_benchmark(
                     if not worker.accept_token(token_id):
                         token_rejection_count += 1
                         if token_rejection_count > 5:
-                            if iter == 0:
-                                print(
-                                    f"Too many tokens rejected for data point {data_point_idx}, stopping after {idx+1}/{len(token_ids)} tokens"
-                                )
                             fail_flag = True
                             break
                 except Exception as e:
