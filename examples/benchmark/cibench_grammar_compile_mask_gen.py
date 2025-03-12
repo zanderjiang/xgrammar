@@ -214,7 +214,7 @@ def run_benchmark(
     fail_cnt = 0
     schema_mismatch_cnt = 0
 
-    tqdm_iter = tqdm(range(-num_warmup, num_iters))
+    tqdm_iter = tqdm(range(-num_warmup, num_iters), disable=True)
     for iter in tqdm_iter:
         if iter < 0:
             tqdm_iter.set_description(f"{dataset_name} Warmup Iter: {iter + num_warmup}")
@@ -225,7 +225,7 @@ def run_benchmark(
             build_time = 0
             exec_time = 0
 
-        tqdm_data_point_iter = tqdm(range(len(dataset_data)))
+        tqdm_data_point_iter = tqdm(range(len(dataset_data)), disable=True)
         for data_point_idx in tqdm_data_point_iter:
             tqdm_data_point_iter.set_description(f"{dataset_name} Data Point: {data_point_idx}")
 
