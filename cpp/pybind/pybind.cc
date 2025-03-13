@@ -19,15 +19,13 @@ PYBIND11_MODULE(xgrammar_bindings, m) {
   pyTokenizerInfo.def(py::init(&TokenizerInfo_Init))
       .def_property_readonly("vocab_type", &TokenizerInfo_GetVocabType)
       .def_property_readonly("vocab_size", &TokenizerInfo::GetVocabSize)
-      .def_property_readonly(
-          "prepend_space_in_tokenization", &TokenizerInfo::GetPrependSpaceInTokenization
-      )
+      .def_property_readonly("add_prefix_space", &TokenizerInfo::GetAddPrefixSpace)
       .def_property_readonly("decoded_vocab", &TokenizerInfo_GetDecodedVocab)
       .def_property_readonly("stop_token_ids", &TokenizerInfo::GetStopTokenIds)
       .def_property_readonly("special_token_ids", &TokenizerInfo::GetSpecialTokenIds)
       .def("dump_metadata", &TokenizerInfo::DumpMetadata)
-      .def_static("from_huggingface", &TokenizerInfo::FromHuggingFace)
-      .def_static("from_vocab_and_metadata", &TokenizerInfo::FromVocabAndMetadata);
+      .def_static("from_vocab_and_metadata", &TokenizerInfo::FromVocabAndMetadata)
+      .def_static("_detect_metadata_from_hf", &TokenizerInfo::DetectMetadataFromHF);
 
   auto pyGrammar = py::class_<Grammar>(m, "Grammar");
   pyGrammar.def("to_string", &Grammar::ToString)
