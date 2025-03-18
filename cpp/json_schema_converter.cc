@@ -761,7 +761,9 @@ std::string JSONSchemaConverter::VisitAny(
          kBasicArray + " | " + kBasicObject;
 }
 
-std::string JSONSchemaConverter::MakePatternForDigitRange(char start, char end, int remainingDigits) {
+std::string JSONSchemaConverter::MakePatternForDigitRange(
+    char start, char end, int remainingDigits
+) {
   std::ostringstream oss;
   if (start == end) {
     oss << start;
@@ -906,8 +908,7 @@ std::vector<std::string> JSONSchemaConverter::GenerateNumberPatterns(int lower, 
             std::string prefix = end_str.substr(0, 1);
             if (end_str[1] > '0') {
               patterns.push_back(
-                  prefix +
-                  MakePatternForDigitRange('0', static_cast<char>(end_str[1] - 1), len - 2)
+                  prefix + MakePatternForDigitRange('0', static_cast<char>(end_str[1] - 1), len - 2)
               );
             }
           } else {
@@ -996,7 +997,6 @@ std::string JSONSchemaConverter::GenerateSubRangeRegex(int lower, int upper) {
   }
   return "(" + oss.str() + ")";
 }
-
 
 std::string JSONSchemaConverter::GenerateRangeRegex(
     std::optional<int> start, std::optional<int> end
