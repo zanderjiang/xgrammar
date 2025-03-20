@@ -156,6 +156,7 @@ class MultipleBoundariesSchema(BaseModel):
         (LargeRangeSchema, 99999),
     ],
 )
+@pytest.mark.hf_token_required
 def test_fill_next_token_bitmask_integer_range(tokenizer_path: str, schema_class, test_value):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, use_fast=True, trust_remote_code=True)
     tokenizer_info = xgr.TokenizerInfo.from_huggingface(tokenizer)
@@ -189,6 +190,7 @@ def test_fill_next_token_bitmask_integer_range(tokenizer_path: str, schema_class
 
 
 @pytest.mark.parametrize("tokenizer_path", tokenizer_path)
+@pytest.mark.hf_token_required
 def test_multiple_boundaries_schema(tokenizer_path: str):
     """Test the complex MultipleBoundariesSchema with multiple integer fields"""
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, use_fast=True, trust_remote_code=True)
