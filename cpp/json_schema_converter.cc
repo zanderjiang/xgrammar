@@ -188,6 +188,8 @@ class JSONSchemaConverter {
       const picojson::object& schema, const std::vector<std::string>& keywords, bool verbose = false
   );
 
+  // NOTE: the visit functions should always return the rule body for later constructing the rule.
+
   /*! \brief Visit the schema and return the rule body for later constructing the rule. */
   std::string VisitSchema(const picojson::value& schema, const std::string& rule_name);
 
@@ -222,6 +224,7 @@ class JSONSchemaConverter {
 
   /*! \brief Visit a number schema. */
   std::string VisitNumber(const picojson::object& schema, const std::string& rule_name);
+
   /*! \brief Visit a string schema. */
   std::string VisitString(const picojson::object& schema, const std::string& rule_name);
 
@@ -303,6 +306,22 @@ class JSONSchemaConverter {
    */
   std::string VisitObject(const picojson::object& schema, const std::string& rule_name);
 
+  /*!
+   * \brief Visit a type array schema:
+   * \example
+   * \code
+   * {
+   *     "type": ["integer", "string"]
+   * }
+   * \endcode
+   *
+   * Method:
+   * - Create a schema for each type in the type array. Copying all other properties.
+   * - Visit each schema and get the rule name.
+   * - Return "(" rule_name_1 | rule_name_2 | ... | rule_name_n ")"
+   */
+  std::string VisitTypeArray(const picojson::object& schema, const std::string& rule_name);
+
   /*! \brief Get the pattern for a property in the object schema. */
   std::string GetPropertyPattern(
       const std::string& prop_name,
@@ -356,8 +375,6 @@ class JSONSchemaConverter {
   picojson::value json_schema_;
   // Whether to use strict mode in conversion. See JSONSchemaToEBNF().
   bool strict_mode_;
-  // Whether to allow empty object/array
-  bool allow_empty_;
   // The colon separator
   std::string colon_pattern_;
   // The cache for basic rules. Mapping from the key of schema returned by GetSchemaCacheIndex()
@@ -393,7 +410,6 @@ JSONSchemaConverter::JSONSchemaConverter(
   } else {
     colon_pattern_ = "\"" + separators->second + "\"";
   }
-  allow_empty_ = !strict_mode_;
 
   AddBasicRules();
 }
@@ -557,7 +573,8 @@ std::string JSONSchemaConverter::VisitSchema(
     XGRAMMAR_CHECK(schema.get<bool>()) << "Schema should not be false: it cannot accept any value";
     return VisitAny(schema, rule_name);
   }
-  XGRAMMAR_CHECK(schema.is<picojson::object>()) << "Schema should be an object or bool";
+  XGRAMMAR_CHECK(schema.is<picojson::object>())
+      << "Schema should be an object or bool, but got " << schema.serialize(false);
 
   WarnUnsupportedKeywords(
       schema,
@@ -584,6 +601,9 @@ std::string JSONSchemaConverter::VisitSchema(
   } else if (schema_obj.count("allOf")) {
     return VisitAllOf(schema_obj, rule_name);
   } else if (schema_obj.count("type")) {
+    if (schema_obj.at("type").is<picojson::array>()) {
+      return VisitTypeArray(schema_obj, rule_name);
+    }
     XGRAMMAR_CHECK(schema_obj.at("type").is<std::string>()) << "Type should be a string";
     const std::string& type = schema_obj.at("type").get<std::string>();
     if (type == "integer") {
@@ -601,8 +621,7 @@ std::string JSONSchemaConverter::VisitSchema(
     } else if (type == "object") {
       return VisitObject(schema_obj, rule_name);
     } else {
-      XGRAMMAR_LOG(FATAL) << "Unsupported type " << type << " in schema "
-                          << schema.serialize(false);
+      XGRAMMAR_LOG(FATAL) << "Unsupported type \"" << type << "\"";
     }
   } else if (schema_obj.count("properties") || schema_obj.count("additionalProperties") ||
              schema_obj.count("unevaluatedProperties")) {
@@ -1215,15 +1234,27 @@ std::string JSONSchemaConverter::VisitString(
   WarnUnsupportedKeywords(
       schema,
       {
-          "minLength",
-          "maxLength",
           "format",
       }
   );
   if (schema.count("pattern")) {
+    if (schema.count("minLength") || schema.count("maxLength") || schema.count("format")) {
+      XGRAMMAR_LOG(WARNING) << "Specifying pattern and minLength/maxLength/format is not "
+                            << "supported yet, ignoring minLength/maxLength/format";
+    }
     std::string regex_pattern = schema.at("pattern").get<std::string>();
     std::string converted_regex = RegexToEBNF(regex_pattern, false);
     return "\"\\\"\" " + converted_regex + " \"\\\"\"";
+  }
+  if (schema.count("minLength") || schema.count("maxLength")) {
+    int min_length = schema.count("minLength") ? schema.at("minLength").get<int64_t>() : 0;
+    int max_length = schema.count("maxLength") ? schema.at("maxLength").get<int64_t>() : -1;
+    XGRAMMAR_CHECK(max_length == -1 || min_length <= max_length)
+        << "In string schema, minLength " << min_length << " is greater than " << "maxLength "
+        << max_length;
+    std::string range_part = "{" + std::to_string(min_length) + "," +
+                             (max_length == -1 ? "" : std::to_string(max_length)) + "}";
+    return "\"\\\"\" " + std::string("[^\"\\\\\\r\\n]") + range_part + " \"\\\"\"";
   }
   return "[\"] " + kBasicStringSub;
 }
@@ -1320,7 +1351,7 @@ std::string JSONSchemaConverter::VisitArray(
 
   result += " \"]\"";
 
-  if (allow_empty_ && could_be_empty) {
+  if (could_be_empty) {
     // result = (result) | []
     auto rest = "\"[\" " + std::string(any_whitespace_ ? "[ \\n\\t]* " : "") + "\"]\"";
     result = "(" + result + ") | " + rest;
@@ -1561,12 +1592,38 @@ std::string JSONSchemaConverter::VisitObject(
   indentManager_->EndIndent();
 
   result += " \"}\"";
-  if (allow_empty_ && could_be_empty) {
+  if (could_be_empty) {
     // result = (result) | {}
     auto rest = "\"{\" " + std::string(any_whitespace_ ? "[ \\n\\t]* " : "") + "\"}\"";
     result = "(" + result + ") | " + rest;
   }
 
+  return result;
+}
+
+std::string JSONSchemaConverter::VisitTypeArray(
+    const picojson::object& schema, const std::string& rule_name
+) {
+  XGRAMMAR_CHECK(schema.at("type").is<picojson::array>());
+  auto type_array = schema.at("type").get<picojson::array>();
+
+  picojson::object schema_copy = schema;
+  if (type_array.size() == 0) {
+    schema_copy.erase("type");
+    return VisitSchema(picojson::value(schema_copy), rule_name);
+  }
+  std::string result;
+  for (const auto& type : type_array) {
+    XGRAMMAR_CHECK(type.is<std::string>())
+        << "type must be a string or an array of strings, but got " << type;
+    if (!result.empty()) {
+      result += " | ";
+    }
+    schema_copy["type"] = type;
+    result += CreateRuleFromSchema(
+        picojson::value(schema_copy), rule_name + "_" + type.get<std::string>()
+    );
+  }
   return result;
 }
 
