@@ -172,7 +172,7 @@ class JSONSchemaConverter {
 
   static std::string GenerateSubRangeRegex(int lower, int upper);
 
-  static std::string formatFloat(double value, int precision);
+  static std::string FormatFloat(double value, int precision);
 
   /*!
    * \brief Create a rule with the given schema and rule name hint.
@@ -1162,7 +1162,7 @@ std::string JSONSchemaConverter::GenerateRangeRegex(
   return result.str();
 }
 
-std::string JSONSchemaConverter::formatFloat(double value, int precision = 6) {
+std::string JSONSchemaConverter::FormatFloat(double value, int precision = 6) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(precision) << value;
   std::string result = oss.str();
@@ -1211,7 +1211,7 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
 
   // Only start defined - match numbers >= start
   if (start && !end) {
-    std::string startIntStr = formatFloat(start.value(), precision);
+    std::string startIntStr = FormatFloat(start.value(), precision);
     parts.push_back(startIntStr);
 
     // fractional parts > startFrac with same integer part
@@ -1253,7 +1253,7 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
 
   // Only end defined - match numbers <= end
   else if (!start && end) {
-    std::string endIntStr = formatFloat(end.value(), precision);
+    std::string endIntStr = FormatFloat(end.value(), precision);
     parts.push_back(endIntStr);
 
     // fractional parts < endFrac with same integer part
@@ -1302,10 +1302,10 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
       if (startFrac == 0.0 && endFrac == 0.0) {
         parts.push_back(std::to_string(startInt));
       } else {
-        std::string startStr = formatFloat(start.value(), precision);
+        std::string startStr = FormatFloat(start.value(), precision);
         parts.push_back(startStr);
 
-        std::string endStr = formatFloat(end.value(), precision);
+        std::string endStr = FormatFloat(end.value(), precision);
         if (startStr != endStr) {
           parts.push_back(endStr);
         }
@@ -1381,10 +1381,10 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
     }
     // Different integer parts
     else {
-      std::string startStr = formatFloat(start.value(), precision);
+      std::string startStr = FormatFloat(start.value(), precision);
       parts.push_back(startStr);
 
-      std::string endStr = formatFloat(end.value(), precision);
+      std::string endStr = FormatFloat(end.value(), precision);
       if (startStr != endStr) {
         parts.push_back(endStr);
       }
