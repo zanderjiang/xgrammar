@@ -1198,13 +1198,17 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
   int endInt = 0;
   double startFrac = 0.0;
   double endFrac = 0.0;
+  bool isStartNegative = false;
+  bool isEndNegative = false;
 
   if (start) {
+    isStartNegative = start.value() < 0;
     startInt = static_cast<int>(floor(start.value()));
     startFrac = start.value() - startInt;
   }
 
   if (end) {
+    isEndNegative = end.value() < 0;
     endInt = static_cast<int>(floor(end.value()));
     endFrac = end.value() - endInt;
   }
@@ -1214,7 +1218,8 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
     std::string startIntStr = FormatFloat(start.value(), precision);
     parts.push_back(startIntStr);
 
-    // fractional parts > startFrac with same integer part
+    // fractional parts > startFrac with same integer part (for positive)
+    // fractional parts < startFrac with same integer part (for negative)
     if (startFrac > 0.0) {
       size_t dotPos = startIntStr.find('.');
       if (dotPos != std::string::npos) {
@@ -1224,18 +1229,37 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
         if (!fracPartStr.empty()) {
           for (size_t i = 0; i < fracPartStr.length(); i++) {
             if (i == 0) {
-              for (char d = fracPartStr[0] + 1; d <= '9'; d++) {
-                parts.push_back(
-                    intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
-                );
+              if (isStartNegative) {
+                for (char d = '0'; d < fracPartStr[0]; d++) {
+                  parts.push_back(
+                      intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                  );
+                }
+              } else {
+                for (char d = fracPartStr[0] + 1; d <= '9'; d++) {
+                  parts.push_back(
+                      intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                  );
+                }
               }
             } else {
               std::string prefix = fracPartStr.substr(0, i);
-              for (char d = fracPartStr[i] + 1; d <= '9'; d++) {
-                parts.push_back(
-                    intPartStr + "\\." + prefix + d + "\\d{0," + std::to_string(precision - i - 1) +
-                    "}"
-                );
+              if (isStartNegative) {
+                if (fracPartStr[i] > '0') {
+                  for (char d = '0'; d < fracPartStr[i]; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + prefix + d + "\\d{0," +
+                        std::to_string(precision - i - 1) + "}"
+                    );
+                  }
+                }
+              } else {
+                for (char d = fracPartStr[i] + 1; d <= '9'; d++) {
+                  parts.push_back(
+                      intPartStr + "\\." + prefix + d + "\\d{0," +
+                      std::to_string(precision - i - 1) + "}"
+                  );
+                }
               }
             }
           }
@@ -1256,7 +1280,8 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
     std::string endIntStr = FormatFloat(end.value(), precision);
     parts.push_back(endIntStr);
 
-    // fractional parts < endFrac with same integer part
+    // fractional parts < endFrac with same integer part (for positive)
+    // fractional parts > endFrac with same integer part (for negative)
     if (endFrac > 0.0) {
       size_t dotPos = endIntStr.find('.');
       if (dotPos != std::string::npos) {
@@ -1266,13 +1291,29 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
         if (!fracPartStr.empty()) {
           for (size_t i = 0; i < fracPartStr.length(); i++) {
             if (i == 0) {
-              for (char d = '0'; d < fracPartStr[0]; d++) {
-                parts.push_back(
-                    intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
-                );
+              if (isEndNegative) {
+                for (char d = fracPartStr[0] + 1; d <= '9'; d++) {
+                  parts.push_back(
+                      intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                  );
+                }
+              } else {
+                for (char d = '0'; d < fracPartStr[0]; d++) {
+                  parts.push_back(
+                      intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                  );
+                }
               }
             } else {
-              if (fracPartStr[i] > '0') {
+              if (isEndNegative) {
+                std::string prefix = fracPartStr.substr(0, i);
+                for (char d = fracPartStr[i] + 1; d <= '9'; d++) {
+                  parts.push_back(
+                      intPartStr + "\\." + prefix + d + "\\d{0," +
+                      std::to_string(precision - i - 1) + "}"
+                  );
+                }
+              } else if (fracPartStr[i] > '0') {
                 std::string prefix = fracPartStr.substr(0, i);
                 for (char d = '0'; d < fracPartStr[i]; d++) {
                   parts.push_back(
@@ -1332,7 +1373,6 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
 
               if (endDigit > startDigit + 1) {
                 std::string prefix = startFracPart.substr(0, diffPos);
-
                 for (char d = startDigit + 1; d < endDigit; d++) {
                   parts.push_back(
                       intPart + "\\." + prefix + d + "\\d{0," +
@@ -1404,18 +1444,37 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
           if (!fracPartStr.empty()) {
             for (size_t i = 0; i < fracPartStr.length(); i++) {
               if (i == 0) {
-                for (char d = fracPartStr[0] + 1; d <= '9'; d++) {
-                  parts.push_back(
-                      intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
-                  );
+                if (isStartNegative) {
+                  for (char d = '0'; d < fracPartStr[0]; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                    );
+                  }
+                } else {
+                  for (char d = fracPartStr[0] + 1; d <= '9'; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                    );
+                  }
                 }
               } else {
                 std::string prefix = fracPartStr.substr(0, i);
-                for (char d = fracPartStr[i] + 1; d <= '9'; d++) {
-                  parts.push_back(
-                      intPartStr + "\\." + prefix + d + "\\d{0," +
-                      std::to_string(precision - i - 1) + "}"
-                  );
+                if (isStartNegative) {
+                  if (fracPartStr[i] > '0') {
+                    for (char d = '0'; d < fracPartStr[i]; d++) {
+                      parts.push_back(
+                          intPartStr + "\\." + prefix + d + "\\d{0," +
+                          std::to_string(precision - i - 1) + "}"
+                      );
+                    }
+                  }
+                } else {
+                  for (char d = fracPartStr[i] + 1; d <= '9'; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + prefix + d + "\\d{0," +
+                        std::to_string(precision - i - 1) + "}"
+                    );
+                  }
                 }
               }
             }
@@ -1434,13 +1493,29 @@ std::string JSONSchemaConverter::GenerateFloatRangeRegex(
           if (!fracPartStr.empty()) {
             for (size_t i = 0; i < fracPartStr.length(); i++) {
               if (i == 0) {
-                for (char d = '0'; d < fracPartStr[0]; d++) {
-                  parts.push_back(
-                      intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
-                  );
+                if (isEndNegative) {
+                  for (char d = fracPartStr[0] + 1; d <= '9'; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                    );
+                  }
+                } else {
+                  for (char d = '0'; d < fracPartStr[0]; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + d + "\\d{0," + std::to_string(precision - 1) + "}"
+                    );
+                  }
                 }
               } else {
-                if (fracPartStr[i] > '0') {
+                if (isEndNegative) {
+                  std::string prefix = fracPartStr.substr(0, i);
+                  for (char d = fracPartStr[i] + 1; d <= '9'; d++) {
+                    parts.push_back(
+                        intPartStr + "\\." + prefix + d + "\\d{0," +
+                        std::to_string(precision - i - 1) + "}"
+                    );
+                  }
+                } else if (fracPartStr[i] > '0') {
                   std::string prefix = fracPartStr.substr(0, i);
                   for (char d = '0'; d < fracPartStr[i]; d++) {
                     parts.push_back(
