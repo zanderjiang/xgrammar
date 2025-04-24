@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 
-import xgrammar as xgr
 from xgrammar.testing import parser_structural_tag
 
 

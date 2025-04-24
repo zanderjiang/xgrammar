@@ -311,27 +311,31 @@ class GrammarFunctor:
         )
 
 
+class StructuralTagResultItem(BaseModel):
+    begin: str
+    params: Dict[str, Any]
+    end: str
+
+
 def parser_structural_tag(
-    input: str, triggers: List[str]
-) -> Tuple[str, List[Tuple[str, Dict[str, Any], str]]]:
+    input: str, structural_tags: Dict[str, Any]
+) -> Tuple[str, List[StructuralTagResultItem]]:
     """Parse structural tags from input string."""
-    # Call the C++ parser through the bindings
+    triggers = structural_tags.get("triggers", [])
     raw_text, raw_tags = _core.testing._parser_structural_tag(input, triggers)
 
-    # Process the results - convert content parts that are valid JSON to Python dictionaries
     processed_tags = []
     for start_tag, content, end_tag in raw_tags:
         try:
-            # Only try to parse content that looks like JSON (for function tags)
             if "{" in content and "}" in content:
                 parsed_content = json.loads(content)
             else:
-                # For non-JSON content, keep as is
                 parsed_content = content
         except json.JSONDecodeError:
-            # If JSON parsing fails, keep the original string
             parsed_content = content
 
-        processed_tags.append((start_tag, parsed_content, end_tag))
+        processed_tags.append(
+            StructuralTagResultItem(begin=start_tag, params=parsed_content, end=end_tag)
+        )
 
     return raw_text, processed_tags
