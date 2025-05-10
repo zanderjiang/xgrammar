@@ -163,6 +163,10 @@ class MixedTypeRangeSchema(BaseModel):
     float_value: float = Field(ge=-10.0, le=10.0)
 
 
+class VeryLargeFloatRangeSchema(BaseModel):
+    value: float = Field(ge=-20_000_000_000.123123, le=20_000_000_000.456789)
+
+
 @pytest.mark.parametrize("tokenizer_path", tokenizer_path)
 @pytest.mark.parametrize(
     "schema_class,test_value",
@@ -200,6 +204,8 @@ class MixedTypeRangeSchema(BaseModel):
         (ComplexFloatRangeSchema, (-1234.1234)),
         (ComplexFloatRangeSchema, (0)),
         (ComplexFloatRangeSchema, (5671.123456)),
+        (VeryLargeFloatRangeSchema, (20_000_000_000.456788)),
+        (VeryLargeFloatRangeSchema, (-19_999_999_999.456789)),
     ],
 )
 @pytest.mark.hf_token_required
