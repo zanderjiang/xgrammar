@@ -4,7 +4,7 @@ import time
 from typing import Dict, List, Tuple
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conint
 from transformers import AutoTokenizer
 
 import xgrammar as xgr
@@ -132,6 +132,10 @@ class LargeRangeSchema(BaseModel):
     value: int = Field(ge=-99999, le=99999)
 
 
+class LargeRangeSchemaStartZero(BaseModel):
+    value: int = Field(ge=0, le=20_000_000_000)
+
+
 class FloatRangeSchema(BaseModel):
     value: float = Field(ge=0.0, le=1.0)
 
@@ -177,6 +181,10 @@ class MixedTypeRangeSchema(BaseModel):
         (LargeRangeSchema, 0),
         (LargeRangeSchema, 5678),
         (LargeRangeSchema, 99999),
+        (LargeRangeSchemaStartZero, 20000000000),
+        (LargeRangeSchemaStartZero, 0),
+        (LargeRangeSchemaStartZero, 10000000000),
+        (LargeRangeSchemaStartZero, 19999999999),
         # Float test cases
         (FloatRangeSchema, 0.0),
         (FloatRangeSchema, 0.5),
@@ -209,7 +217,7 @@ def test_fill_next_token_bitmask_intfloat_range(tokenizer_path: str, schema_clas
     compiled_grammar = compiler.compile_json_schema(schema_class)
     matcher = xgr.GrammarMatcher(compiled_grammar)
     time_end = time.monotonic_ns()
-    print(f"Time to init GrammarMatcher: {(time_end - time_start) / 1e3} us")
+    # print(f"Time to init GrammarMatcher: {(time_end - time_start) / 1e3} us")
 
     token_bitmask = xgr.allocate_token_bitmask(1, tokenizer_info.vocab_size)
 
@@ -218,7 +226,7 @@ def test_fill_next_token_bitmask_intfloat_range(tokenizer_path: str, schema_clas
         time_start = time.monotonic_ns()
         matcher.fill_next_token_bitmask(token_bitmask)
         time_end = time.monotonic_ns()
-        print(f"Time to fill_next_token_bitmask: {(time_end - time_start) / 1e3} us")
+        # print(f"Time to fill_next_token_bitmask: {(time_end - time_start) / 1e3} us")
 
         assert matcher._debug_accept_string(bytes([c]))
 
