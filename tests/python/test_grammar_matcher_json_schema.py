@@ -4,7 +4,7 @@ import time
 from typing import Dict, List, Tuple
 
 import pytest
-from pydantic import BaseModel, Field, conint
+from pydantic import BaseModel, Field
 from transformers import AutoTokenizer
 
 import xgrammar as xgr
@@ -223,7 +223,7 @@ def test_fill_next_token_bitmask_intfloat_range(tokenizer_path: str, schema_clas
     compiled_grammar = compiler.compile_json_schema(schema_class)
     matcher = xgr.GrammarMatcher(compiled_grammar)
     time_end = time.monotonic_ns()
-    # print(f"Time to init GrammarMatcher: {(time_end - time_start) / 1e3} us")
+    print(f"Time to init GrammarMatcher: {(time_end - time_start) / 1e3} us")
 
     token_bitmask = xgr.allocate_token_bitmask(1, tokenizer_info.vocab_size)
 
@@ -232,7 +232,7 @@ def test_fill_next_token_bitmask_intfloat_range(tokenizer_path: str, schema_clas
         time_start = time.monotonic_ns()
         matcher.fill_next_token_bitmask(token_bitmask)
         time_end = time.monotonic_ns()
-        # print(f"Time to fill_next_token_bitmask: {(time_end - time_start) / 1e3} us")
+        print(f"Time to fill_next_token_bitmask: {(time_end - time_start) / 1e3} us")
 
         assert matcher._debug_accept_string(bytes([c]))
 
