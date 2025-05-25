@@ -15,6 +15,7 @@
 #include "../grammar_functor.h"
 #include "../json_schema_converter.h"
 #include "../regex_converter.h"
+#include "../structural_tag_parser.h"
 #include "../testing.h"
 #include "python_methods.h"
 
@@ -232,7 +233,8 @@ NB_MODULE(xgrammar_bindings, m) {
           },
           nb::arg("start").none(),
           nb::arg("end").none()
-      );
+      )
+      .def("_parse_structural_tag", &parse_structural_tag);
 
   auto pyGrammarFunctorModule = pyTestingModule.def_submodule("grammar_functor");
   pyGrammarFunctorModule.def("structure_normalizer", &StructureNormalizer::Apply)
