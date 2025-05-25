@@ -1646,48 +1646,56 @@ std::string JSONSchemaConverter::VisitInteger(
           "multipleOf",
       }
   );
+
+  auto checkAndConvertIntegerBound = [](const picojson::value& value) -> int64_t {
+    XGRAMMAR_CHECK(value.is<int64_t>() || value.is<double>()) << "Value must be a number";
+
+    if (value.is<int64_t>()) {
+      return value.get<int64_t>();
+    } else {
+      double val = value.get<double>();
+
+      XGRAMMAR_CHECK(val == std::floor(val)) << "Integer constraint must be a whole number";
+
+      static const double MAX_INT64_AS_DOUBLE =
+          static_cast<double>(std::numeric_limits<int64_t>::max());
+      static const double MIN_INT64_AS_DOUBLE =
+          static_cast<double>(std::numeric_limits<int64_t>::min());
+
+      XGRAMMAR_CHECK(val <= MAX_INT64_AS_DOUBLE) << "Integer exceeds maximum limit";
+      XGRAMMAR_CHECK(val >= MIN_INT64_AS_DOUBLE) << "Integer exceeds minimum limit";
+
+      return static_cast<int64_t>(val);
+    }
+  };
+
   std::string range_regex = "";
   if (schema.count("minimum") || schema.count("maximum") || schema.count("exclusiveMinimum") ||
       schema.count("exclusiveMaximum")) {
     std::optional<int64_t> start, end;
     if (schema.count("minimum")) {
-      XGRAMMAR_CHECK(schema.at("minimum").is<double>() || schema.at("minimum").is<int64_t>())
-          << "minimum must be a number";
-      double start_double = schema.at("minimum").get<double>();
-      XGRAMMAR_CHECK(start_double == static_cast<int64_t>(start_double))
-          << "minimum must be an integer";
-      start = static_cast<int64_t>(start_double);
+      start = checkAndConvertIntegerBound(schema.at("minimum"));
     }
     if (schema.count("exclusiveMinimum")) {
-      XGRAMMAR_CHECK(
-          schema.at("exclusiveMinimum").is<double>() || schema.at("exclusiveMinimum").is<int64_t>()
-      ) << "exclusiveMinimum must be a number";
-      double start_double = schema.at("exclusiveMinimum").get<double>();
-      XGRAMMAR_CHECK(start_double == static_cast<int64_t>(start_double))
-          << "exclusiveMinimum must be an integer";
-      start = static_cast<int64_t>(start_double) + 1;  // Exclusive minimum means start + 1
+      int64_t exclusive_min = checkAndConvertIntegerBound(schema.at("exclusiveMinimum"));
+      XGRAMMAR_CHECK(exclusive_min != std::numeric_limits<int64_t>::max())
+          << "exclusiveMinimum would cause integer overflow";
+      start = exclusive_min + 1;
     }
     if (schema.count("maximum")) {
-      XGRAMMAR_CHECK(schema.at("maximum").is<double>() || schema.at("maximum").is<int64_t>())
-          << "maximum must be a number";
-      double end_double = schema.at("maximum").get<double>();
-      XGRAMMAR_CHECK(end_double == static_cast<int64_t>(end_double))
-          << "maximum must be an integer";
-      end = static_cast<int64_t>(end_double);
+      end = checkAndConvertIntegerBound(schema.at("maximum"));
     }
     if (schema.count("exclusiveMaximum")) {
-      XGRAMMAR_CHECK(
-          schema.at("exclusiveMaximum").is<double>() || schema.at("exclusiveMaximum").is<int64_t>()
-      ) << "exclusiveMaximum must be a number";
-      double end_double = schema.at("exclusiveMaximum").get<double>();
-      XGRAMMAR_CHECK(end_double == static_cast<int64_t>(end_double))
-          << "exclusiveMaximum must be an integer";
-      end = static_cast<int64_t>(end_double) - 1;  // Exclusive maximum means end - 1
+      int64_t exclusive_max = checkAndConvertIntegerBound(schema.at("exclusiveMaximum"));
+      XGRAMMAR_CHECK(exclusive_max != std::numeric_limits<int64_t>::min())
+          << "exclusiveMaximum would cause integer underflow";
+      end = exclusive_max - 1;
     }
     XGRAMMAR_CHECK(!(start && end) || *start <= *end)
-        << "Invalid range, start value greater than end value";
+        << "Invalid range: minimum greater than maximum";
     range_regex = GenerateRangeRegex(start, end);
   }
+
   if (!range_regex.empty()) {
     std::string converted_regex = RegexToEBNF(range_regex, false);
     return converted_regex;  // not " " for numbers
