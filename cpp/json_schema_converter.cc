@@ -1657,6 +1657,19 @@ std::string JSONSchemaConverter::VisitInteger(
 
       XGRAMMAR_CHECK(val == std::floor(val)) << "Integer constraint must be a whole number";
 
+      static const double PROBLEMATIC_MIN = -9223372036854776000.0;
+      static const double PROBLEMATIC_MAX = 9223372036854776000.0;
+
+      if (val == PROBLEMATIC_MIN) {
+        XGRAMMAR_CHECK(false
+        ) << "Integer exceeds minimum limit due to precision loss at 64-bit boundary";
+      }
+
+      if (val == PROBLEMATIC_MAX) {
+        XGRAMMAR_CHECK(false
+        ) << "Integer exceeds maximum limit due to precision loss at 64-bit boundary";
+      }
+
       static const double MAX_INT64_AS_DOUBLE =
           static_cast<double>(std::numeric_limits<int64_t>::max());
       static const double MIN_INT64_AS_DOUBLE =
