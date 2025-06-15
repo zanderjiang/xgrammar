@@ -4,7 +4,7 @@ import time
 from typing import Dict, List, Tuple
 
 import pytest
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from transformers import AutoTokenizer
 
 import xgrammar as xgr
@@ -292,7 +292,7 @@ def test_64bit_limit_validation(
 
     if should_fail:
         with pytest.raises((ValueError, OverflowError, RuntimeError)) as exc_info:
-            compiled_grammar = compiler.compile_json_schema(schema_class)
+            compiler.compile_json_schema(schema_class)
 
         assert error_pattern.lower() in str(exc_info.value).lower()
 
