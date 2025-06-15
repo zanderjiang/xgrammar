@@ -2,6 +2,7 @@ autodocsumm
 ipykernel
 ipywidgets
 jupyter_client
+linkify-it-py
 markdown>=3.4.0
 matplotlib
 myst-parser
@@ -12,7 +13,7 @@ pandoc
 pillow
 pydantic
 sentencepiece
-sphinx == 5.2.3
+sphinx==5.2.3
 sphinx-autobuild
 sphinx-book-theme
 sphinx-copybutton

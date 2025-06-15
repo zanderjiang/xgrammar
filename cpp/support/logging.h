@@ -190,9 +190,9 @@ class LogMessage {
   LogMessage(const std::string& file, int lineno, int level) {
     std::time_t t = std::time(nullptr);
     stream_ << "[" << std::put_time(std::localtime(&t), "%H:%M:%S") << "] " << file << ":" << lineno
-            << level_strings_[level] << "\n";
+            << level_strings_[level];
   }
-  ~LogMessage() { std::cerr << stream_.str(); }
+  ~LogMessage() { std::cerr << stream_.str() << "\n"; }
   std::ostringstream& stream() { return stream_; }
 
  private:
