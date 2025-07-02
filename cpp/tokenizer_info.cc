@@ -10,6 +10,7 @@
 #include <array>
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -293,6 +294,24 @@ TokenizerInfo::Impl::Impl(
     return a.second < b.second;
   };
   std::sort(sorted_decoded_vocab_.begin(), sorted_decoded_vocab_.end(), f_compare_token);
+
+  // The value means: the subtree is [i, trie_subtree_nodes_range[i]).
+  trie_subtree_nodes_range.resize(sorted_decoded_vocab_.size(), 0);
+  std::stack<std::pair<std::string, int32_t>> prefix_stack;
+  for (size_t i = 0; i < sorted_decoded_vocab_.size(); ++i) {
+    const auto& token = sorted_decoded_vocab_[i].second;
+    while ((!prefix_stack.empty()) && (token.find(prefix_stack.top().first) == std::string::npos)) {
+      const auto& top_pair = prefix_stack.top();
+      trie_subtree_nodes_range[top_pair.second] = i;
+      prefix_stack.pop();
+    }
+    prefix_stack.push({token, i});
+  }
+  while (!prefix_stack.empty()) {
+    const auto& top_pair = prefix_stack.top();
+    trie_subtree_nodes_range[top_pair.second] = sorted_decoded_vocab_.size();
+    prefix_stack.pop();
+  }
 }
 
 std::string TokenizerInfo::Impl::DumpMetadata() const {
@@ -387,6 +406,10 @@ const std::vector<int32_t>& TokenizerInfo::GetSpecialTokenIds() const {
 }
 const std::vector<std::pair<int32_t, std::string>>& TokenizerInfo::GetSortedDecodedVocab() const {
   return pimpl_->GetSortedDecodedVocab();
+}
+
+const std::vector<int32_t>& TokenizerInfo::GetTrieSubtreeNodesRange() const {
+  return pimpl_->GetTrieSubtreeNodesRange();
 }
 
 std::string TokenizerInfo::DumpMetadata() const { return pimpl_->DumpMetadata(); }

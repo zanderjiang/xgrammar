@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 
 import pytest
 from pydantic import BaseModel, Field
-from transformers import AutoTokenizer
+from transformers import AutoConfig, AutoTokenizer
 
 import xgrammar as xgr
 from xgrammar.testing import (
@@ -488,6 +488,27 @@ def test_mask_generation_format(value: str, format: str):
 
     assert matcher.accept_token(tokenizer.eos_token_id)
     assert matcher.is_terminated()
+
+
+@pytest.mark.hf_token_required
+def test_implicit_left_recursion_schema():
+    model_name = "meta-llama/Llama-3.2-1B-Instruct"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    config = AutoConfig.from_pretrained(model_name)
+
+    json_schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "pattern": "^(https?://)?([\\da-z\\.-]+)\\.([a-z\\.]{2,6})([/\\w \\.-]*)*/?",
+            }
+        },
+    }
+    tokenizer_info = xgr.TokenizerInfo.from_huggingface(tokenizer, vocab_size=config.vocab_size)
+    grammar_compiler = xgr.GrammarCompiler(tokenizer_info)
+    _ = grammar_compiler.compile_json_schema(schema=json.dumps(json_schema))
 
 
 if __name__ == "__main__":

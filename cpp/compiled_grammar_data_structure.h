@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "earley_parser.h"
+
 // matcher_data_structure.h is included to use StackElement
 #include "persistent_stack.h"
 #include "support/dynamic_bitset.h"
@@ -43,7 +45,7 @@ struct AdaptiveTokenMask {
     // Only store all accepted token indices. Then rejected indices = all_indices - accepted_indices
     // - uncertain_indices. This is useful when |accepted_indices| < |rejected_indices|.
     kAccepted = 0,
-    // Only store all accepted token indices. Then accepted indices = all_indices - rejected_indices
+    // Only store all rejected token indices. Then accepted indices = all_indices - rejected_indices
     // - uncertain_indices. This is useful when |accepted_indices| > |rejected_indices|.
     kRejected = 1,
     // Store all accepted token indices in a bitset. This is useful when both |accepted_indices| and
@@ -67,6 +69,13 @@ struct AdaptiveTokenMask {
       const std::vector<std::pair<int32_t, std::string>>& sorted_decoded_vocab,
       const std::vector<int32_t>& accepted_indices,
       const std::vector<int32_t>& rejected_indices,
+      const std::vector<int32_t>& uncertain_indices
+  );
+
+  AdaptiveTokenMask(
+      size_t vocab_size,
+      const std::vector<std::pair<int32_t, std::string>>& sorted_decoded_vocab,
+      const std::vector<int32_t>& accepted_indices,
       const std::vector<int32_t>& uncertain_indices
   );
 
@@ -121,9 +130,8 @@ class CompiledGrammar::Impl {
     }
   };
 
-  /*! \brief Mapping from the stack top element to the adaptive token mask. */
-  std::unordered_map<StackElement, AdaptiveTokenMask, StackElementHash, StackElementEqual>
-      adaptive_token_mask_cache;
+  /*! \brief Mapping from the parser state to the adaptive token mask. */
+  std::unordered_map<ParserState, AdaptiveTokenMask, StateHashForCache> adaptive_token_mask_cache;
 
   Grammar GetGrammar() const { return grammar; }
 
