@@ -11,6 +11,7 @@
 #include "json_schema_converter.h"
 #include "regex_converter.h"
 #include "structural_tag.h"
+#include "support/logging.h"
 
 namespace xgrammar {
 
