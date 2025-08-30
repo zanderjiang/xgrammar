@@ -576,15 +576,61 @@ class LookaheadAssertionAnalyzerImpl : public GrammarMutator {
     }
     for (int i = 0; i < static_cast<int>(grammar->NumRules()); ++i) {
       auto rule = grammar->GetRule(i);
-      if (i == grammar->GetRootRuleId() || rule.lookahead_assertion_id != -1) {
+      if (i == grammar->GetRootRuleId()) {
+        continue;
+      }
+      if (rule.lookahead_assertion_id != -1) {
+        builder_->UpdateLookaheadExact(i, IsExactLookaheadAssertion(i));
         continue;
       }
       auto look_head_assertion_id = DetectLookaheadAssertion(i);
       if (look_head_assertion_id != -1) {
         builder_->UpdateLookaheadAssertion(i, look_head_assertion_id);
+        builder_->UpdateLookaheadExact(i);
       }
     }
     return builder_->Get(grammar->GetRootRuleId());
+  }
+
+  bool IsExactLookaheadAssertion(int32_t rule_id) {
+    XGRAMMAR_DCHECK(base_grammar_->GetRule(rule_id).lookahead_assertion_id != -1);
+    bool found = false;
+    for (int i = 0; i < static_cast<int>(base_grammar_->NumRules()); ++i) {
+      auto rule = base_grammar_->GetRule(i);
+      auto grammar_expr = base_grammar_->GetGrammarExpr(rule.body_expr_id);
+      if (grammar_expr.type == GrammarExprType::kTagDispatch) {
+        for (int j = 1; j < grammar_expr.size() - 3; j += 2) {
+          if (grammar_expr[j] == rule_id) {
+            return false;
+          }
+        }
+        continue;
+      }
+      XGRAMMAR_DCHECK(grammar_expr.type == GrammarExprType::kChoices);
+      for (auto sequence_id : grammar_expr) {
+        auto sequence_expr = base_grammar_->GetGrammarExpr(sequence_id);
+        if (sequence_expr.type != GrammarExprType::kSequence) {
+          continue;
+        }
+        auto last_element = base_grammar_->GetGrammarExpr(sequence_expr.end()[-1]);
+        if (last_element.type == GrammarExprType::kRuleRef && last_element[0] == rule_id &&
+            i != rule_id) {
+          return false;
+        }
+
+        for (int j = 0; j < sequence_expr.size() - 1; ++j) {
+          auto element_expr = base_grammar_->GetGrammarExpr(sequence_expr[j]);
+          if (element_expr.type != GrammarExprType::kRuleRef || element_expr[0] != rule_id) {
+            continue;
+          }
+          if (found) {
+            return false;
+          }
+          found = true;
+        }
+      }
+    }
+    return found;
   }
 
   int32_t DetectLookaheadAssertion(int32_t rule_id) {
@@ -1648,7 +1694,7 @@ class RepetitionNormalizerImpl {
         continue;
       }
       int repeat_rule_id = expr[0];
-      (*grammar)->exact_lookahead.push_back(repeat_rule_id);
+      grammar->ImplPtr()->GetRule(repeat_rule_id).is_exact_lookahead = true;
       if (std::binary_search(
               (*grammar)->allow_empty_rule_ids.begin(),
               (*grammar)->allow_empty_rule_ids.end(),
@@ -1658,7 +1704,6 @@ class RepetitionNormalizerImpl {
         expr.SetData(1, 0);  // Set min repeat to 0
       }
     }
-    std::sort((*grammar)->exact_lookahead.begin(), (*grammar)->exact_lookahead.end());
   }
 };
 
