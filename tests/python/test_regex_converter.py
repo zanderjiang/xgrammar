@@ -469,5 +469,17 @@ def test_mask_generation(tokenizer_path: str, regex: str, instance: str):
     assert matcher.is_terminated()
 
 
+empty_regex = ["", "^$", "(())", "()", "^", "$", "()|()"]
+
+
+@pytest.mark.parametrize("regex", empty_regex)
+def test_empty(regex: str):
+    grammar = xgr.Grammar.from_regex(regex)
+    expected_grammar = 'root ::= ("")\n'
+    assert str(grammar) == expected_grammar
+    assert _is_grammar_accept_string(grammar, "")
+    assert not _is_grammar_accept_string(grammar, "a")
+
+
 if __name__ == "__main__":
     pytest.main(sys.argv)
