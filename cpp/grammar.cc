@@ -46,9 +46,11 @@ Grammar Grammar::FromJSONSchema(
     std::optional<int> indent,
     std::optional<std::pair<std::string, std::string>> separators,
     bool strict_mode,
+    std::optional<int> max_whitespace_cnt,
     bool print_converted_ebnf
 ) {
-  auto ebnf_string = JSONSchemaToEBNF(schema, any_whitespace, indent, separators, strict_mode);
+  auto ebnf_string =
+      JSONSchemaToEBNF(schema, any_whitespace, indent, separators, strict_mode, max_whitespace_cnt);
   if (print_converted_ebnf) {
     XGRAMMAR_LOG(INFO) << "Converted EBNF: " << ebnf_string << std::endl;
   }

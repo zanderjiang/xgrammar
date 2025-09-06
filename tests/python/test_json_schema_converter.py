@@ -2185,5 +2185,64 @@ def test_generate_float_regex():
     )
 
 
+def test_limited_whitespace_cnt():
+    expected_grammar = r"""basic_escape ::= (([\"\\/bfnrt]) | ("u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9])) (=(basic_string_sub))
+basic_string_sub ::= (("\"") | ([^\0-\x1f\"\\\r\n] basic_string_sub) | ("\\" basic_escape basic_string_sub)) (=(basic_string_sub_repeat_1 basic_string_sub_repeat_2 [,}\]:]))
+basic_string ::= (("\"" basic_string_sub)) (=(root_repeat_1_3 root_repeat_2_3 "}"))
+root ::= (("{" root_repeat_1 root_repeat_2 "\"key\"" root_repeat_1_1 root_repeat_2_1 ":" root_repeat_1_2 root_repeat_2_2 basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+basic_string_sub_repeat_1 ::= ("" | ([ \n\t])) (=(basic_string_sub_repeat_2))
+basic_string_sub_repeat_2 ::= ("" | ([ \n\t]))
+root_repeat_1 ::= ("" | ([ \n\t])) (=(root_repeat_2))
+root_repeat_2 ::= ("" | ([ \n\t])) (=("\"key\"" root_repeat_1_1 root_repeat_2_1 ":" root_repeat_1_2 root_repeat_2_2 basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+root_repeat_1_1 ::= ("" | ([ \n\t])) (=(root_repeat_2_1))
+root_repeat_2_1 ::= ("" | ([ \n\t])) (=(":" root_repeat_1_2 root_repeat_2_2 basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+root_repeat_1_2 ::= ("" | ([ \n\t])) (=(root_repeat_2_2))
+root_repeat_2_2 ::= ("" | ([ \n\t])) (=(basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+root_repeat_1_3 ::= ("" | ([ \n\t])) (=(root_repeat_2_3))
+root_repeat_2_3 ::= ("" | ([ \n\t])) (=("}"))
+"""
+    schema = {"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}
+    grammar = xgr.Grammar.from_json_schema(schema, any_whitespace=True, max_whitespace_cnt=2)
+
+    assert grammar is not None
+    assert str(grammar) == expected_grammar
+    assert _is_grammar_accept_string(grammar, '{  "key"  :  "value"  }')
+    assert _is_grammar_accept_string(grammar, '{"key":"value"}')
+    assert not _is_grammar_accept_string(grammar, '{   "key"  :  "value"   }')
+    assert not _is_grammar_accept_string(grammar, '{    "key"  :  "value"    }')
+
+
+def test_limited_whitespace_compile():
+    expected_grammar = r"""basic_escape ::= (([\"\\/bfnrt]) | ("u" [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9] [A-Fa-f0-9])) (=(basic_string_sub))
+basic_string_sub ::= (("\"") | ([^\0-\x1f\"\\\r\n] basic_string_sub) | ("\\" basic_escape basic_string_sub)) (=(basic_string_sub_repeat_1 basic_string_sub_repeat_2 [,}\]:]))
+basic_string ::= (("\"" basic_string_sub)) (=(root_repeat_1_3 root_repeat_2_3 "}"))
+root ::= (("{" root_repeat_1 root_repeat_2 "\"key\"" root_repeat_1_1 root_repeat_2_1 ":" root_repeat_1_2 root_repeat_2_2 basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+basic_string_sub_repeat_1 ::= ("" | ([ \n\t])) (=(basic_string_sub_repeat_2))
+basic_string_sub_repeat_2 ::= ("" | ([ \n\t]))
+root_repeat_1 ::= ("" | ([ \n\t])) (=(root_repeat_2))
+root_repeat_2 ::= ("" | ([ \n\t])) (=("\"key\"" root_repeat_1_1 root_repeat_2_1 ":" root_repeat_1_2 root_repeat_2_2 basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+root_repeat_1_1 ::= ("" | ([ \n\t])) (=(root_repeat_2_1))
+root_repeat_2_1 ::= ("" | ([ \n\t])) (=(":" root_repeat_1_2 root_repeat_2_2 basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+root_repeat_1_2 ::= ("" | ([ \n\t])) (=(root_repeat_2_2))
+root_repeat_2_2 ::= ("" | ([ \n\t])) (=(basic_string root_repeat_1_3 root_repeat_2_3 "}"))
+root_repeat_1_3 ::= ("" | ([ \n\t])) (=(root_repeat_2_3))
+root_repeat_2_3 ::= ("" | ([ \n\t])) (=("}"))
+"""
+    schema = {"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}
+    tokenizer_info = xgr.TokenizerInfo([])
+    compiler = xgr.GrammarCompiler(tokenizer_info)
+    compiled_grammar = compiler.compile_json_schema(
+        schema, any_whitespace=True, max_whitespace_cnt=2
+    )
+    assert compiled_grammar is not None
+    grammar = compiled_grammar.grammar
+    assert str(grammar) == expected_grammar
+    assert grammar is not None
+    assert _is_grammar_accept_string(grammar, '{  "key"  :  "value"  }')
+    assert _is_grammar_accept_string(grammar, '{"key":"value"}')
+    assert not _is_grammar_accept_string(grammar, '{   "key"  :  "value"   }')
+    assert not _is_grammar_accept_string(grammar, '{    "key"  :  "value"    }')
+
+
 if __name__ == "__main__":
     pytest.main(sys.argv)
